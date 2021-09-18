@@ -83,7 +83,7 @@ describe('create_formula', () => {
           signers: [payer, formulaKeypair],
         }
       );
-      let formula = await program.account.formula.fetch(formulaKeypair.publicKey)
+      const formula = await program.account.formula.fetch(formulaKeypair.publicKey)
       expect(formula).to.eql(expectedFormula)
     });
   })

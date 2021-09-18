@@ -9,17 +9,16 @@ pub mod crafting {
     use super::*;
 
     pub fn create_formula(
-        _ctx: Context<CreateFormula>,
+        ctx: Context<CreateFormula>,
         _ingredients_count: u16, // The number of ingredients in the formula
         _items_count: u16, // The number of items output by the formula
-        _ingredients: Vec<Ingredient>,
-        _output_items: Vec<Item>,
+        ingredients: Vec<Ingredient>,
+        output_items: Vec<Item>,
         // bump: u8,             // Run `find_program_address` offchain for canonical bump
     ) -> ProgramResult {
-        // let formula = &mut ctx.accounts.formula;
-        // formula.items = items;
-        // formula.output_mint = *ctx.accounts.output_mint.to_account_info().key;
-        // formula.reversible = reversible;
+        let formula = &mut ctx.accounts.formula;
+        formula.ingredients = ingredients;
+        formula.output_items = output_items;
 
         // // Hand over control of the mint account to PDA
         // let pda_pubkey = Pubkey::create_program_address(
