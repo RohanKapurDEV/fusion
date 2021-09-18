@@ -98,9 +98,12 @@ describe('create_formula', () => {
       expect(formula).to.eql(expectedFormula)
 
       // Vaidate the mint authority for the output items gets transfered to the formula
-      const outputMintAfter = await outputToken.getMintInfo();
-      assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda))
-
+      await Promise.all(expectedFormula.outputItems.map(async outputItem => {
+        const token = new Token(provider.connection, outputItem.mint, TOKEN_PROGRAM_ID, payer);
+        const outputMintAfter = await token.getMintInfo();
+        assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda))
+      }))
+      
     });
   })
 
