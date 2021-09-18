@@ -8,17 +8,17 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod crafting {
     use super::*;
 
-    pub fn create(
-        ctx: Context<Create>,
-        items: Vec<Ingredient>,
-        reversible: bool,
+    pub fn create_formula<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, CreateFormula<'info>>,
+        _ingredients_count: u16, // The number of ingredients in the formula
+        _items_count: u16, // The number of items output by the formula
+        ingredients: Vec<Ingredient>,
+        output_items: Vec<Item>,
         bump: u8,             // Run `find_program_address` offchain for canonical bump
-        _space_multiple: u16, // The number of ingredients in the formula
     ) -> ProgramResult {
         let formula = &mut ctx.accounts.formula;
-        formula.items = items;
-        formula.output_mint = *ctx.accounts.output_mint.to_account_info().key;
-        formula.reversible = reversible;
+        formula.ingredients = ingredients;
+        formula.output_items = output_items;
 
         // Hand over control of the mint account to PDA
         let pda_pubkey = Pubkey::create_program_address(
@@ -30,29 +30,31 @@ pub mod crafting {
             &ctx.program_id,
         )?;
 
-        let cpi_accounts = SetAuthority {
-            account_or_mint: ctx.accounts.output_mint.to_account_info().clone(),
-            current_authority: ctx.accounts.authority.clone(),
-        };
+        for output_mint in ctx.remaining_accounts {
+            let cpi_accounts = SetAuthority {
+                account_or_mint: output_mint.clone(),
+                current_authority: ctx.accounts.authority.to_account_info().clone(),
+            };
 
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
-        set_authority(cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?;
+            let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
+            set_authority(cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?;
+        }
 
         Ok(())
     }
 }
 
 #[derive(Accounts)]
-#[instruction(_space_multiple: u16)]
-pub struct Create<'info> {
-    #[account(init, payer = authority, space = 8 + 32 + 1 + 33 * _space_multiple as usize)]
+#[instruction(ingredients_count: u16, items_count: u16)]
+pub struct CreateFormula<'info> {
+    #[account(init,
+        payer = authority,
+        space = 8 + 32 + 1 + 34 * ingredients_count as usize + 33 * items_count as usize
+    )]
     pub formula: Account<'info, Formula>,
 
     #[account(mut)]
-    pub output_mint: Account<'info, Mint>,
-
-    #[account(signer)]
-    pub authority: AccountInfo<'info>,
+    pub authority: Signer<'info>,
 
     // System program account
     pub system_program: Program<'info, System>,
@@ -65,19 +67,28 @@ pub struct Create<'info> {
 pub struct Formula {
     // Vector of <Ingredient> items required to satisy the formula
     // Each <Ingredient> item is 33 bytes
-    pub items: Vec<Ingredient>,
+    pub ingredients: Vec<Ingredient>,
     // Pubkey of the mint of the formula
-    pub output_mint: Pubkey,
-    // Is formula reversible
-    pub reversible: bool,
+    pub output_items: Vec<Item>
+}
+
+/// Size: 32 + 1 + 1 = 34 bytes
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+pub struct Ingredient {
+    /// Pubkey of the ingredient's token mint
+    pub mint: Pubkey,
+    /// Amount of the token required to satisy the "creation" of the ingredient
+    pub amount: u8,
+    /// Option that burns the ingredient when crafting
+    pub burn_on_craft: bool,
 }
 
 /// Size: 32 + 1 = 33 bytes
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
-pub struct Ingredient {
-    // Pubkey of the ingredient's token mint
+pub struct Item {
+    /// Pubkey of the item's token mint
     pub mint: Pubkey,
-    // Amount of the token required to satisy the "creation" of the ingredient
+    /// Amount of the token that will be minted on crat
     pub amount: u8,
 }
 
