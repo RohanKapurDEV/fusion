@@ -1,9 +1,24 @@
 {
+    "name": "crafting",
+    "version": "1.0.0",
+    "description": "Metaplex crafting contract",
+    "main": "index.js",
+    "directories": {
+      "test": "tests"
+    },
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "mithraiclabs",
+    "license": "ISC",
     "dependencies": {
         "@project-serum/anchor": "^0.16.0"
     },
     "devDependencies": {
+        "@types/mocha": "^9.0.0",
         "chai": "^4.3.4",
-        "mocha": "^9.0.3"
+        "mocha": "^9.0.3",
+        "ts-mocha": "^8.0.0",
+        "typescript": "^4.4.3"
     }
 }

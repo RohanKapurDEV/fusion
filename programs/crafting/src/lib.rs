@@ -8,8 +8,8 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod crafting {
     use super::*;
 
-    pub fn create(
-        ctx: Context<Create>,
+    pub fn create_formula(
+        ctx: Context<CreateFormula>,
         items: Vec<Ingredient>,
         reversible: bool,
         bump: u8,             // Run `find_program_address` offchain for canonical bump
@@ -44,7 +44,7 @@ pub mod crafting {
 
 #[derive(Accounts)]
 #[instruction(_space_multiple: u16)]
-pub struct Create<'info> {
+pub struct CreateFormula<'info> {
     #[account(init, payer = authority, space = 8 + 32 + 1 + 33 * _space_multiple as usize)]
     pub formula: Account<'info, Formula>,
 
