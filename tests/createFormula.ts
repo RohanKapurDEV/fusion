@@ -1,9 +1,10 @@
 import * as anchor from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AccountMeta, PublicKey, SystemProgram } from "@solana/web3.js";
 import {assert, expect} from 'chai';
 import { createIngredientMints, initNewTokenMint } from "./utils";
 
+const textEncoder = new TextEncoder();
 
 describe('create_formula', () => {
 
@@ -14,7 +15,7 @@ describe('create_formula', () => {
   const payer = anchor.web3.Keypair.generate();
   // The mintAuthority for the ingredients
   const mintAuthority = anchor.web3.Keypair.generate();
-  let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey;
+  let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
   before(async () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
@@ -39,8 +40,9 @@ describe('create_formula', () => {
         0
       );
       outputMint = mintAccount.publicKey
+      outputToken = new Token(provider.connection, outputMint, TOKEN_PROGRAM_ID, payer)
     })
-    it('should create a Formula', async () => {
+    it('should create a Formula and transfer the mint authority for output items', async () => {
       const ingredients = [{
         mint: ingredientMintA,
         amount: 1,
@@ -68,11 +70,17 @@ describe('create_formula', () => {
       // Generate new keypair for the Formula account
       const formulaKeypair = anchor.web3.Keypair.generate();
 
+      const [outMintPda, outBump] = await PublicKey.findProgramAddress([
+        textEncoder.encode("crafting"),
+        formulaKeypair.publicKey.toBuffer(),
+      ], program.programId);
+
       await program.rpc.createFormula(
         expectedFormula.ingredients.length,
         expectedFormula.outputItems.length,
         expectedFormula.ingredients,
         expectedFormula.outputItems,
+        outBump,
         {
           accounts: {
             formula: formulaKeypair.publicKey,
@@ -84,8 +92,15 @@ describe('create_formula', () => {
           signers: [payer, formulaKeypair],
         }
       );
+
+      // Validate the Formula gets created and stored on chain properly
       const formula = await program.account.formula.fetch(formulaKeypair.publicKey)
       expect(formula).to.eql(expectedFormula)
+
+      // Vaidate the mint authority for the output items gets transfered to the formula
+      const outputMintAfter = await outputToken.getMintInfo();
+      assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda))
+
     });
   })
 

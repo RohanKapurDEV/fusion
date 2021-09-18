@@ -8,35 +8,37 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod crafting {
     use super::*;
 
-    pub fn create_formula(
-        ctx: Context<CreateFormula>,
+    pub fn create_formula<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, CreateFormula<'info>>,
         _ingredients_count: u16, // The number of ingredients in the formula
         _items_count: u16, // The number of items output by the formula
         ingredients: Vec<Ingredient>,
         output_items: Vec<Item>,
-        // bump: u8,             // Run `find_program_address` offchain for canonical bump
+        bump: u8,             // Run `find_program_address` offchain for canonical bump
     ) -> ProgramResult {
         let formula = &mut ctx.accounts.formula;
         formula.ingredients = ingredients;
         formula.output_items = output_items;
 
-        // // Hand over control of the mint account to PDA
-        // let pda_pubkey = Pubkey::create_program_address(
-        //     &[
-        //         &"crafting".as_bytes(),
-        //         &formula.to_account_info().key.to_bytes()[..32],
-        //         &[bump],
-        //     ],
-        //     &ctx.program_id,
-        // )?;
+        // Hand over control of the mint account to PDA
+        let pda_pubkey = Pubkey::create_program_address(
+            &[
+                &"crafting".as_bytes(),
+                &formula.to_account_info().key.to_bytes()[..32],
+                &[bump],
+            ],
+            &ctx.program_id,
+        )?;
 
-        // let cpi_accounts = SetAuthority {
-        //     account_or_mint: ctx.accounts.output_mint.to_account_info().clone(),
-        //     current_authority: ctx.accounts.authority.clone(),
-        // };
+        for output_mint in ctx.remaining_accounts {
+            let cpi_accounts = SetAuthority {
+                account_or_mint: output_mint.clone(),
+                current_authority: ctx.accounts.authority.to_account_info().clone(),
+            };
 
-        // let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
-        // set_authority(cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?;
+            let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
+            set_authority(cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?;
+        }
 
         Ok(())
     }
