@@ -31,7 +31,7 @@ describe('create_formula', () => {
         payer,
         2
       );
-      // TODO: create the 1 output mint which is owned by the user
+      // create the 1 output mint which is owned by the user
       const {mintAccount} = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -61,11 +61,12 @@ describe('create_formula', () => {
         isWritable: true,
         isSigner: false
       }))
-      const formulaKeypair = anchor.web3.Keypair.generate();
       const expectedFormula = {
         ingredients,
         outputItems, 
       }
+      // Generate new keypair for the Formula account
+      const formulaKeypair = anchor.web3.Keypair.generate();
 
       await program.rpc.createFormula(
         expectedFormula.ingredients.length,
