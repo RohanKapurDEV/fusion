@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, burn, mint_to, set_authority, Burn, MintTo, SetAuthority};
+use anchor_spl::token::{self, burn, mint_to, set_authority, Burn, MintTo, SetAuthority, Token};
 
 // Program ID
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -49,39 +49,16 @@ pub mod crafting {
         bump: u8,
     ) -> ProgramResult {
         let formula = &ctx.accounts.formula;
+        let expected_remaining = formula.ingredients.len() * 2 + formula.output_items.len() * 2;
+        let accounts_info_iter = &mut ctx.remaining_accounts.iter();
 
-        // ctx.remaining_accounts should be the token and mint accounts for each ingredient
-        // and output item. Basically two accounts for each ingredient and output item
-        let output_items_flag = formula.ingredients.len() * 2;
-        let output_ata_flag = output_items_flag + formula.output_items.len();
-
-        // Split up remaining_accounts into 4 distinct slices
-        let ingredient_token_accounts = &ctx.remaining_accounts[..formula.ingredients.len()];
-        let ingredient_mint_accounts =
-            &ctx.remaining_accounts[formula.ingredients.len()..output_items_flag];
-        let output_item_mint_accounts = &ctx.remaining_accounts[output_items_flag..output_ata_flag];
-        let output_item_token_accounts = &ctx.remaining_accounts[output_ata_flag..];
-
-        // Enforce the size of the remaining acconuts array
-        let expected_remaining = output_items_flag + formula.output_items.len() * 2;
         if ctx.remaining_accounts.len() != expected_remaining {
             return Err(ErrorCode::InvalidLength.into());
         }
 
-        if ingredient_token_accounts.len() != ingredient_mint_accounts.len() {
-            return Err(ErrorCode::InvalidLength.into());
-        }
-
-        if output_item_token_accounts.len() != output_item_mint_accounts.len() {
-            return Err(ErrorCode::InvalidLength.into());
-        }
-
-        // For this bit to work, the order in which the Formula account stores ingredients
-        // should be reflected in the order of the token and mint accounts passed into
-        // the instruction
-        for (index, ingredient) in formula.ingredients.iter().enumerate() {
-            let ingredient_token = &ingredient_token_accounts[index];
-            let ingredient_mint = &ingredient_mint_accounts[index];
+        for ingredient in formula.ingredients.iter() {
+            let ingredient_token = next_account_info(accounts_info_iter)?;
+            let ingredient_mint = next_account_info(accounts_info_iter)?;
 
             let token_mint = token::accessor::mint(ingredient_token)?;
             let token_amount = token::accessor::amount(ingredient_token)? as u8;
@@ -124,19 +101,16 @@ pub mod crafting {
         ];
         let signer = &[&seeds[..]];
 
-        // Mint output items to user address
-        for (index, item) in formula.output_items.iter().enumerate() {
-            // Validate mint order and validity
-            if item.mint != *output_item_mint_accounts[index].key {
-                return Err(ErrorCode::InvalidMint.into());
-            }
+        for item in formula.output_items.iter() {
+            let output_item_token = next_account_info(accounts_info_iter)?;
+            let output_item_mint = next_account_info(accounts_info_iter)?;
 
             let cpi_ctx = CpiContext::new_with_signer(
                 ctx.accounts.token_program.clone(),
                 MintTo {
-                    mint: output_item_mint_accounts[index].clone(),
+                    mint: output_item_mint.clone(),
                     authority: ctx.accounts.pda_auth.clone(),
-                    to: output_item_token_accounts[index].clone(),
+                    to: output_item_token.clone(),
                 },
                 signer,
             );
