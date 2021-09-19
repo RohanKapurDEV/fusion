@@ -235,7 +235,7 @@ impl From<AuthorityType> for spl_token::instruction::AuthorityType {
 
 #[error]
 pub enum ErrorCode {
-    #[msg("Length of ingredients != number of token accounts")]
+    #[msg("Invalid length")]
     InvalidLength,
     #[msg("Invalid token mint")]
     InvalidMint,
