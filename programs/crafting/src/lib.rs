@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, burn, mint_to, set_authority, Burn, MintTo, SetAuthority, Token};
+use anchor_spl::token::{self, burn, mint_to, set_authority, Burn, MintTo, SetAuthority};
 
 // Program ID
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -89,7 +89,7 @@ pub mod crafting {
                         authority: ctx.accounts.authority.to_account_info(),
                     },
                 );
-                token::burn(cpi_ctx, ingredient.amount as u64)?;
+                burn(cpi_ctx, ingredient.amount as u64)?;
             }
         }
 
@@ -124,7 +124,8 @@ pub mod crafting {
 #[derive(Accounts)]
 #[instruction(ingredients_count: u16, items_count: u16)]
 pub struct CreateFormula<'info> {
-    #[account(init,
+    #[account(
+        init,
         payer = authority,
         space = 8 + 32 + 1 + 34 * ingredients_count as usize + 33 * items_count as usize
     )]
