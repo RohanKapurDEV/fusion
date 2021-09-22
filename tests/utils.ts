@@ -145,3 +145,22 @@ export interface OutputItemType {
   mint: PublicKey;
   amount: number;
 }
+
+export const createItemMints = async (
+  connection: Connection,
+  /** The owner for the new mint account */
+  owner: PublicKey,
+  wallet: Keypair,
+  amount: number = 2
+) => {
+  const itemMints: PublicKey[] = [];
+  await Promise.all(
+    Array(amount)
+      .fill(0)
+      .map(async (x) => {
+        const { mintAccount } = await initNewTokenMint(connection, owner, wallet, 0);
+        itemMints.push(mintAccount.publicKey);
+      })
+  );
+  return itemMints;
+};
