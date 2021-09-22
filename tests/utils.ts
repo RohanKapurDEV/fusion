@@ -1,6 +1,10 @@
 import { MintLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from "@solana/web3.js";
 
+const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID: PublicKey = new PublicKey(
+  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+);
+
 export const initNewTokenMint = async (
   connection: Connection,
   /** The owner for the new mint account */
@@ -49,6 +53,31 @@ export const createIngredientMints = async (
       })
   );
   return ingredientMints;
+};
+
+export const createTokenAccount = async (
+  connection: Connection,
+  owner: Keypair,
+  mint: PublicKey,
+  tokenAccount: PublicKey
+) => {
+  const transaction = new Transaction();
+  transaction.add(
+    Token.createAssociatedTokenAccountInstruction(
+      SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      mint,
+      tokenAccount,
+      owner.publicKey,
+      owner.publicKey
+    )
+  );
+
+  await sendAndConfirmTransaction(connection, transaction, [owner], {
+    commitment: "confirmed",
+  });
+
+  return tokenAccount;
 };
 
 export const createIngredients = (mintArray: PublicKey[], amountArray: number[], burnAll: boolean) => {
