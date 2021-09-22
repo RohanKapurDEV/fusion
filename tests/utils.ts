@@ -62,6 +62,7 @@ export const createTokenAccount = async (
   tokenAccount: PublicKey
 ) => {
   const transaction = new Transaction();
+
   transaction.add(
     Token.createAssociatedTokenAccountInstruction(
       SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
