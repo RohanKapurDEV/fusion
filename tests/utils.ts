@@ -1,5 +1,13 @@
 import { MintLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from "@solana/web3.js";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  sendAndConfirmTransaction,
+  SystemProgram,
+  Transaction,
+  Signer,
+} from "@solana/web3.js";
 
 const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID: PublicKey = new PublicKey(
   "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
@@ -55,7 +63,7 @@ export const createIngredientMints = async (
   return ingredientMints;
 };
 
-export const createTokenAccount = async (
+export const createAssociatedTokenAccount = async (
   connection: Connection,
   owner: Keypair,
   mint: PublicKey,
@@ -81,6 +89,26 @@ export const createTokenAccount = async (
   return tokenAccount;
 };
 
+export const mintTokensToAccount = async (
+  connection: Connection,
+  amount: number,
+  mint: PublicKey,
+  recipient: PublicKey,
+  mint_authority: PublicKey,
+  multiSigners: Signer[],
+  signers: Keypair[]
+) => {
+  let transaction = new Transaction();
+
+  transaction.add(
+    Token.createMintToInstruction(TOKEN_PROGRAM_ID, mint, recipient, mint_authority, multiSigners, amount)
+  );
+
+  await sendAndConfirmTransaction(connection, transaction, signers, {
+    commitment: "confirmed",
+  });
+};
+
 export const createIngredients = (mintArray: PublicKey[], amountArray: number[], burnAll: boolean) => {
   let ingredients: IngredientType[] = [];
 
@@ -100,7 +128,7 @@ export const createOutputItems = (mintArray: PublicKey[], amountArray: number[])
 
   mintArray.forEach((mint, index) => {
     outputItems.push({
-      mint: mintArray[index],
+      mint: mint,
       amount: amountArray[index],
     });
   });
