@@ -1,13 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AccountMeta, PublicKey, SystemProgram } from "@solana/web3.js";
-<<<<<<< HEAD
 import { assert, expect } from "chai";
 import { createIngredientMints, initNewTokenMint } from "./utils";
-=======
-import {assert, expect} from 'chai';
-import { createIngredientMints, createItemMints, initNewTokenMint } from "./utils";
->>>>>>> 016b2de76dc56d056229706179cf1e6d5e10bca9
 
 const textEncoder = new TextEncoder();
 
@@ -21,7 +16,6 @@ describe("create_formula", () => {
   // The mintAuthority for the ingredients (2-to-1 crafting)
   const mintAuthority = anchor.web3.Keypair.generate();
   let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
-<<<<<<< HEAD
 
   // The mintAuthority for the ingredients (4-to-6 crafting)
   const mintAuthorityOne = anchor.web3.Keypair.generate();
@@ -33,8 +27,6 @@ describe("create_formula", () => {
   let outputMintThree: PublicKey, outputTokenThree: Token, outputMintFour: PublicKey, outputTokenFour: Token;
   let outputMintFive: PublicKey, outputTokenFive: Token, outputMintSix: PublicKey, outputTokenSix: Token;
 
-=======
->>>>>>> 016b2de76dc56d056229706179cf1e6d5e10bca9
   before(async () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
@@ -127,12 +119,6 @@ describe("create_formula", () => {
   });
 
   describe("Four to six crafting", () => {
-    // The mintAuthority for the ingredients (4-to-6 crafting)
-    const mintAuthorityOne = anchor.web3.Keypair.generate();
-    let ingredientMintOne: PublicKey, ingredientMintTwo: PublicKey, ingredientMintThree: PublicKey,ingredientMintFour: PublicKey;
-    let outputMintOne: PublicKey, outputMintTwo: PublicKey;
-    let outputMintThree: PublicKey, outputMintFour: PublicKey;
-    let outputMintFive: PublicKey, outputMintSix: PublicKey;
     before(async () => {
       // create the initial 4 mints (not owned by the user)
       [ingredientMintOne, ingredientMintTwo, ingredientMintThree, ingredientMintFour] = await createIngredientMints(
@@ -141,8 +127,8 @@ describe("create_formula", () => {
         payer,
         4
       );
+
       // create the 6 output mint which is owned by the user
-<<<<<<< HEAD
       const mintAccountOne = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
         (_) => _.mintAccount
       );
@@ -175,15 +161,6 @@ describe("create_formula", () => {
       outputTokenSix = new Token(provider.connection, outputMintSix, TOKEN_PROGRAM_ID, payer);
     });
     it("should create a Formula and transfer the mint authority for output items", async () => {
-=======
-      [outputMintOne, outputMintTwo, outputMintThree, outputMintFour, outputMintFive, outputMintSix] = await createItemMints(provider.connection,
-        payer.publicKey,
-        payer,
-        6
-      )
-    })
-    it('should create a Formula and transfer the mint authority for output items', async () => {
->>>>>>> 016b2de76dc56d056229706179cf1e6d5e10bca9
       const ingredients = [
         {
           mint: ingredientMintOne,
