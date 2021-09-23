@@ -53,7 +53,7 @@ pub mod crafting {
         let accounts_info_iter = &mut ctx.remaining_accounts.iter();
 
         if ctx.remaining_accounts.len() != expected_remaining {
-            return Err(ErrorCode::InvalidLength.into());
+            return Err(ErrorCode::InvalidRemainingAccountsLength.into());
         }
 
         for ingredient in formula.ingredients.iter() {
@@ -149,7 +149,10 @@ pub struct Craft<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"crafting", &formula.to_account_info().key.to_bytes()[..32]], bump = bump)]
+    #[account(
+        seeds = [b"crafting", &formula.to_account_info().key.to_bytes()[..32]],
+        bump = bump
+    )]
     pub pda_auth: AccountInfo<'info>,
 
     #[account(constraint = token_program.key == &token::ID)]
@@ -210,8 +213,8 @@ impl From<AuthorityType> for spl_token::instruction::AuthorityType {
 
 #[error]
 pub enum ErrorCode {
-    #[msg("Invalid length")]
-    InvalidLength,
+    #[msg("Invalid remaining accounts length")]
+    InvalidRemainingAccountsLength,
     #[msg("Invalid token mint")]
     InvalidMint,
     #[msg("Invalid token amount")]
