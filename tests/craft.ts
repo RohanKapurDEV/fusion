@@ -2,7 +2,7 @@ import * as anchor from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AccountMeta, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert, expect } from "chai";
-import { Ingredient, Item } from "./types"
+import { Formula, Ingredient, Item } from "./types"
 import {
   createIngredientMints,
   initNewTokenMint,
@@ -107,12 +107,13 @@ describe("craft", async () => {
 
   it("Craft the formula", async () => {
     // grab the formula from the chain
-    const formula = await program.account.formula.fetch(formulaKp.publicKey)
+    const formula = await program.account.formula.fetch(formulaKp.publicKey) as Formula;
 
     let remainingAccounts: AccountMeta[] = [];
-
     // Create ingredient ATAs for crafter
-    await Promise.all(formula.ingredients.map(async (ingredient: Ingredient, index: number) => {
+    const starterPromise = Promise.resolve(null);
+    await formula.ingredients.reduce(async (accumulator, ingredient) => {
+      await accumulator;
       let craftersTokenAccount = await createAssociatedTokenAccount(
         provider.connection,
         crafter,
@@ -140,19 +141,21 @@ describe("craft", async () => {
         isWritable: ingredient.burnOnCraft,
         isSigner: false,
       });
-    }));
+      return null;
+    }, starterPromise);
 
     const [outMintPda, outBump] = await PublicKey.findProgramAddress(
       [textEncoder.encode("crafting"), formulaKp.publicKey.toBuffer()],
       program.programId
     );
 
-    await Promise.all(formula.outputItems.map(async (item: Item) => {
+    await formula.outputItems.reduce(async (accumulator, item) => {
+      await accumulator;
       // Create output item ATAs for crafter
       const outputItemTokenAccount = await createAssociatedTokenAccount(
         provider.connection,
         crafter,
-        formula.outputItems[0].mint
+        item.mint
       );
 
       // Push output item token account
@@ -168,7 +171,9 @@ describe("craft", async () => {
         isWritable: true,
         isSigner: false,
       });
-    }));
+      return null;
+    }, starterPromise);
+
     try {
       await program.rpc.craft(outBump, {
         accounts: {

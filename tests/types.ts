@@ -10,3 +10,8 @@ export type Item = {
   mint: PublicKey;
   amount: number;
 }
+
+export type Formula = {
+  ingredients: Ingredient[],
+  outputItems: Item[];
+}

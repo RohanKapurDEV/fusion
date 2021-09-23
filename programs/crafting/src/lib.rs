@@ -53,7 +53,7 @@ pub mod crafting {
         let accounts_info_iter = &mut ctx.remaining_accounts.iter();
 
         if ctx.remaining_accounts.len() != expected_remaining {
-            return Err(ErrorCode::InvalidLength.into());
+            return Err(ErrorCode::InvalidRemainingAccountsLength.into());
         }
 
         for ingredient in formula.ingredients.iter() {
@@ -213,8 +213,8 @@ impl From<AuthorityType> for spl_token::instruction::AuthorityType {
 
 #[error]
 pub enum ErrorCode {
-    #[msg("Invalid length")]
-    InvalidLength,
+    #[msg("Invalid remaining accounts length")]
+    InvalidRemainingAccountsLength,
     #[msg("Invalid token mint")]
     InvalidMint,
     #[msg("Invalid token amount")]
