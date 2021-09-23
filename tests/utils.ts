@@ -1,4 +1,4 @@
-import { MintLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   Connection,
   Keypair,
@@ -8,10 +8,6 @@ import {
   Transaction,
   Signer,
 } from "@solana/web3.js";
-
-const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID: PublicKey = new PublicKey(
-  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-);
 
 export const initNewTokenMint = async (
   connection: Connection,
@@ -66,17 +62,21 @@ export const createIngredientMints = async (
 export const createAssociatedTokenAccount = async (
   connection: Connection,
   owner: Keypair,
-  mint: PublicKey,
-  tokenAccount: PublicKey
+  mint: PublicKey
 ) => {
   const transaction = new Transaction();
-
+  const associatedTokenId = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    mint,
+    owner.publicKey
+  )
   transaction.add(
     Token.createAssociatedTokenAccountInstruction(
-      SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID,
       TOKEN_PROGRAM_ID,
       mint,
-      tokenAccount,
+      associatedTokenId,
       owner.publicKey,
       owner.publicKey
     )
@@ -86,7 +86,7 @@ export const createAssociatedTokenAccount = async (
     commitment: "confirmed",
   });
 
-  return tokenAccount;
+  return associatedTokenId;
 };
 
 export const mintTokensToAccount = async (
@@ -94,17 +94,15 @@ export const mintTokensToAccount = async (
   amount: number,
   mint: PublicKey,
   recipient: PublicKey,
-  mint_authority: PublicKey,
-  multiSigners: Signer[],
-  signers: Keypair[]
+  mintAuthority: Keypair,
 ) => {
   let transaction = new Transaction();
 
   transaction.add(
-    Token.createMintToInstruction(TOKEN_PROGRAM_ID, mint, recipient, mint_authority, multiSigners, amount)
+    Token.createMintToInstruction(TOKEN_PROGRAM_ID, mint, recipient, mintAuthority.publicKey, [], amount)
   );
 
-  await sendAndConfirmTransaction(connection, transaction, signers, {
+  await sendAndConfirmTransaction(connection, transaction, [mintAuthority], {
     commitment: "confirmed",
   });
 };

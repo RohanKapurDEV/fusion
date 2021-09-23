@@ -149,7 +149,10 @@ pub struct Craft<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"crafting", &formula.to_account_info().key.to_bytes()[..32]], bump = bump)]
+    #[account(
+        seeds = [b"crafting", &formula.to_account_info().key.to_bytes()[..32]],
+        bump = bump
+    )]
     pub pda_auth: AccountInfo<'info>,
 
     #[account(constraint = token_program.key == &token::ID)]

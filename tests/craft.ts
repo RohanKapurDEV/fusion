@@ -2,6 +2,7 @@ import * as anchor from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AccountMeta, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert, expect } from "chai";
+import { Ingredient, Item } from "./types"
 import {
   createIngredientMints,
   initNewTokenMint,
@@ -42,6 +43,10 @@ describe("craft", async () => {
     );
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(crafter.publicKey, 10_000_000_000),
+      "confirmed"
+    );
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(mintAuthority.publicKey, 10_000_000_000),
       "confirmed"
     );
 
@@ -101,91 +106,89 @@ describe("craft", async () => {
   });
 
   it("Craft the formula", async () => {
-    // Recreate the ngredients and outputItems for reference
-    const ingredients = createIngredients([ingredientMintA, ingredientMintB], [1, 1], true);
-    const outputItems = createOutputItems([outputMint], [1]);
+    // grab the formula from the chain
+    const formula = await program.account.formula.fetch(formulaKp.publicKey)
 
-    const ingredientTokenAccounts: PublicKey[] = [];
+    let remainingAccounts: AccountMeta[] = [];
 
     // Create ingredient ATAs for crafter
-    ingredients.forEach(async (ingredient, index) => {
-      let token_account = await createAssociatedTokenAccount(
+    await Promise.all(formula.ingredients.map(async (ingredient: Ingredient, index: number) => {
+      let craftersTokenAccount = await createAssociatedTokenAccount(
         provider.connection,
         crafter,
-        ingredient.mint,
-        tokenAccountArray[index].publicKey
+        ingredient.mint
       );
 
-      ingredientTokenAccounts.push(token_account);
-    });
-
-    // Create output item ATAs for crafter
-    let outputItemTokenAccount = await createAssociatedTokenAccount(
-      provider.connection,
-      crafter,
-      outputItems[0].mint,
-      outputTokenAccount.publicKey
-    );
-
-    // Mint the right amount of ingredient tokens to the crafter's ATAs
-    ingredients.forEach(async (ingredient, index) => {
+      // Mint the right amount of ingredient tokens to the crafter's ATAs
       await mintTokensToAccount(
         provider.connection,
         ingredient.amount,
         ingredient.mint,
-        ingredientTokenAccounts[index],
-        mintAuthority.publicKey,
-        [mintAuthority],
-        [mintAuthority]
+        craftersTokenAccount,
+        mintAuthority,
       );
-    });
+
+      remainingAccounts.push({
+        pubkey: craftersTokenAccount,
+        isWritable: ingredient.burnOnCraft,
+        isSigner: false,
+      });
+
+      // Push ingredient mints
+      remainingAccounts.push({
+        pubkey: ingredient.mint,
+        isWritable: ingredient.burnOnCraft,
+        isSigner: false,
+      });
+    }));
 
     const [outMintPda, outBump] = await PublicKey.findProgramAddress(
       [textEncoder.encode("crafting"), formulaKp.publicKey.toBuffer()],
       program.programId
     );
 
-    let remainingAccounts: AccountMeta[] = [];
+    await Promise.all(formula.outputItems.map(async (item: Item) => {
+      // Create output item ATAs for crafter
+      const outputItemTokenAccount = await createAssociatedTokenAccount(
+        provider.connection,
+        crafter,
+        formula.outputItems[0].mint
+      );
 
-    ingredients.forEach((ingredient, index) => {
-      // Push crafter's ingredient ATAs
+      // Push output item token account
       remainingAccounts.push({
-        pubkey: ingredientTokenAccounts[index],
+        pubkey: outputItemTokenAccount,
         isWritable: true,
-        isSigner: true,
-      });
-
-      // Push ingredient mints
-      remainingAccounts.push({
-        pubkey: ingredient.mint,
-        isWritable: false,
         isSigner: false,
       });
-    });
 
-    // Push output item token account
-    remainingAccounts.push({
-      pubkey: outputItemTokenAccount,
-      isWritable: true,
-      isSigner: false,
-    });
-
-    outputItems.forEach((item) => {
       // Push output Item mints
       remainingAccounts.push({
         pubkey: item.mint,
-        isSigner: false,
         isWritable: true,
+        isSigner: false,
       });
-    });
+    }));
+    try {
+      await program.rpc.craft(outBump, {
+        accounts: {
+          authority: crafter.publicKey,
+          formula: formulaKp.publicKey,
+          pdaAuth: outMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+        remainingAccounts,
+        signers: [crafter],
+      });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+    assert.ok(true)
 
-    await program.rpc.craft(outBump, {
-      accounts: {
-        formula: formulaKp.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      remainingAccounts,
-      signers: [crafter, mintAuthority],
-    });
+    // TODO: Write a assertion(s) that validates the appropriate ingredients where burned
+
+    // TODO: Write an assertion that actually validates the user received the tokens
+
   });
 });
