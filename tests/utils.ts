@@ -59,18 +59,14 @@ export const createIngredientMints = async (
   return ingredientMints;
 };
 
-export const createAssociatedTokenAccount = async (
-  connection: Connection,
-  owner: Keypair,
-  mint: PublicKey
-) => {
+export const createAssociatedTokenAccount = async (connection: Connection, owner: Keypair, mint: PublicKey) => {
   const transaction = new Transaction();
   const associatedTokenId = await Token.getAssociatedTokenAddress(
     ASSOCIATED_TOKEN_PROGRAM_ID,
     TOKEN_PROGRAM_ID,
     mint,
     owner.publicKey
-  )
+  );
   transaction.add(
     Token.createAssociatedTokenAccountInstruction(
       ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -94,7 +90,7 @@ export const mintTokensToAccount = async (
   amount: number,
   mint: PublicKey,
   recipient: PublicKey,
-  mintAuthority: Keypair,
+  mintAuthority: Keypair
 ) => {
   let transaction = new Transaction();
 

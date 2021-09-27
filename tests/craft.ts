@@ -1,8 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { AccountMeta, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { AccountMeta, Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert, expect } from "chai";
-import { Formula, Ingredient, Item } from "./types"
+import { Formula, Ingredient, Item } from "./types";
 import {
   createIngredientMints,
   initNewTokenMint,
@@ -28,11 +28,6 @@ describe("craft", async () => {
   const mintAuthority = anchor.web3.Keypair.generate();
   let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
   let formulaKp: Keypair;
-
-  // Crafter's token accounts for IngredientMintA & IngredientMintB
-  const tokenAccountArray = [anchor.web3.Keypair.generate(), anchor.web3.Keypair.generate()];
-  // Crafter's token account for OutputItem
-  const outputTokenAccount = anchor.web3.Keypair.generate();
 
   // Set up a formula to craft in main test block
   before("Create a 2-to-1 formula", async () => {
@@ -107,18 +102,17 @@ describe("craft", async () => {
 
   it("Craft the formula", async () => {
     // grab the formula from the chain
-    const formula = await program.account.formula.fetch(formulaKp.publicKey) as Formula;
+    const formula = (await program.account.formula.fetch(formulaKp.publicKey)) as Formula;
 
     let remainingAccounts: AccountMeta[] = [];
+    let ingredientTokenPubkeys: PublicKey[] = [];
+    let outputTokenPubkeys: PublicKey[] = [];
+
     // Create ingredient ATAs for crafter
     const starterPromise = Promise.resolve(null);
     await formula.ingredients.reduce(async (accumulator, ingredient) => {
       await accumulator;
-      let craftersTokenAccount = await createAssociatedTokenAccount(
-        provider.connection,
-        crafter,
-        ingredient.mint
-      );
+      let craftersTokenAccount = await createAssociatedTokenAccount(provider.connection, crafter, ingredient.mint);
 
       // Mint the right amount of ingredient tokens to the crafter's ATAs
       await mintTokensToAccount(
@@ -126,7 +120,7 @@ describe("craft", async () => {
         ingredient.amount,
         ingredient.mint,
         craftersTokenAccount,
-        mintAuthority,
+        mintAuthority
       );
 
       remainingAccounts.push({
@@ -134,6 +128,7 @@ describe("craft", async () => {
         isWritable: ingredient.burnOnCraft,
         isSigner: false,
       });
+      ingredientTokenPubkeys.push(craftersTokenAccount);
 
       // Push ingredient mints
       remainingAccounts.push({
@@ -152,11 +147,7 @@ describe("craft", async () => {
     await formula.outputItems.reduce(async (accumulator, item) => {
       await accumulator;
       // Create output item ATAs for crafter
-      const outputItemTokenAccount = await createAssociatedTokenAccount(
-        provider.connection,
-        crafter,
-        item.mint
-      );
+      const outputItemTokenAccount = await createAssociatedTokenAccount(provider.connection, crafter, item.mint);
 
       // Push output item token account
       remainingAccounts.push({
@@ -164,6 +155,7 @@ describe("craft", async () => {
         isWritable: true,
         isSigner: false,
       });
+      outputTokenPubkeys.push(outputItemTokenAccount);
 
       // Push output Item mints
       remainingAccounts.push({
@@ -189,11 +181,28 @@ describe("craft", async () => {
       console.error(err);
       throw err;
     }
-    assert.ok(true)
+    assert.ok(true);
 
-    // TODO: Write a assertion(s) that validates the appropriate ingredients where burned
+    // Query and assert that ingredient token balances are 0
+    const ingredientPromiseStart = Promise.resolve(null);
+    await ingredientTokenPubkeys.reduce(async (accumulator, pubkey) => {
+      await accumulator;
 
-    // TODO: Write an assertion that actually validates the user received the tokens
+      const balance = await provider.connection.getTokenAccountBalance(pubkey);
+      assert.ok("0" == balance.value.amount);
 
+      return null;
+    }, ingredientPromiseStart);
+
+    // Query and assert that output token balances are as formula describes
+    const outoutPromiseStart = Promise.resolve(null);
+    await outputTokenPubkeys.reduce(async (accumulator, output, index) => {
+      await accumulator;
+
+      const balance = await provider.connection.getTokenAccountBalance(output);
+      assert.ok(formula.outputItems[index].amount.toString() == balance.value.amount);
+
+      return null;
+    }, outoutPromiseStart);
   });
 });
