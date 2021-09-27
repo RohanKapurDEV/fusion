@@ -1,5 +1,6 @@
 [programs.localnet]
 crafting = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+token_metadata = "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
 
 [registry]
 url = "https://anchor.projectserum.com"
