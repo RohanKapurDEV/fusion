@@ -134,11 +134,11 @@ pub struct CreateFormula<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    // System program account
+    // Misc accounts
     pub system_program: Program<'info, System>,
-
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,
+    pub metaplex_metadata: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]

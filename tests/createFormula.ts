@@ -13,6 +13,11 @@ describe("create_formula", () => {
   const program = anchor.workspace.Crafting;
   const payer = anchor.web3.Keypair.generate();
 
+  // Token metadata program setup
+  const idl = JSON.parse(require("fs").readFileSync("./target/idl/crafting.json", "utf8"));
+  const token_metadata_id = new anchor.web3.PublicKey("5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC");
+  const token_metadata_program = new anchor.Program(idl, token_metadata_id);
+
   // The mintAuthority for the ingredients (2-to-1 crafting)
   const mintAuthority = anchor.web3.Keypair.generate();
   let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
@@ -48,6 +53,7 @@ describe("create_formula", () => {
       outputMint = mintAccount.publicKey;
       outputToken = new Token(provider.connection, outputMint, TOKEN_PROGRAM_ID, payer);
     });
+
     it("should create a Formula and transfer the mint authority for output items", async () => {
       const ingredients = [
         {
@@ -160,6 +166,7 @@ describe("create_formula", () => {
       outputMintSix = mintAccountSix.publicKey;
       outputTokenSix = new Token(provider.connection, outputMintSix, TOKEN_PROGRAM_ID, payer);
     });
+
     it("should create a Formula and transfer the mint authority for output items", async () => {
       const ingredients = [
         {
@@ -183,6 +190,7 @@ describe("create_formula", () => {
           burnOnCraft: true,
         },
       ];
+
       const outputItems = [
         {
           mint: outputMintOne,
@@ -215,10 +223,12 @@ describe("create_formula", () => {
         isWritable: true,
         isSigner: false,
       }));
+
       const expectedFormula = {
         ingredients,
         outputItems,
       };
+
       // Generate new keypair for the Formula account
       const formulaKeypair = anchor.web3.Keypair.generate();
 
@@ -258,5 +268,10 @@ describe("create_formula", () => {
         })
       );
     });
+  });
+
+  describe("One to one crafting, metaplex edition outputs", () => {
+    // Create a formula where the Ingredient has an associated Metadata account
+    // and the output is a MasterEdition that can mint new Editions
   });
 });
