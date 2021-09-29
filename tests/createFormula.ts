@@ -13,11 +13,6 @@ describe("create_formula", () => {
   const program = anchor.workspace.Crafting;
   const payer = anchor.web3.Keypair.generate();
 
-  // Token metadata program setup
-  const idl = JSON.parse(require("fs").readFileSync("./target/idl/crafting.json", "utf8"));
-  const token_metadata_id = new anchor.web3.PublicKey("5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC");
-  const token_metadata_program = new anchor.Program(idl, token_metadata_id);
-
   // The mintAuthority for the ingredients (2-to-1 crafting)
   const mintAuthority = anchor.web3.Keypair.generate();
   let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
