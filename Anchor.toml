@@ -1,6 +1,5 @@
 [programs.localnet]
 crafting = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
-token_metadata = "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
 
 [registry]
 url = "https://anchor.projectserum.com"
@@ -11,7 +10,7 @@ wallet = "~/.config/solana/id.json"
 
 [[test.genesis]]
 address = "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
-program = "./target/deploy/spl_token_metadata.so.so"
+program = "tests/deps/spl_token_metadata.so"
 
 [scripts]
 test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
