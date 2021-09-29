@@ -138,7 +138,6 @@ pub struct CreateFormula<'info> {
     pub system_program: Program<'info, System>,
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,
-    pub metaplex_metadata: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
