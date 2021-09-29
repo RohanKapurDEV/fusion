@@ -8,6 +8,10 @@ import {
   Transaction,
   Signer,
 } from "@solana/web3.js";
+import { decodeMetadata } from "./metadata_utils";
+
+const textEncoder = new TextEncoder();
+const TOKEN_METADATA = new PublicKey("5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC");
 
 export const initNewTokenMint = async (
   connection: Connection,
@@ -157,4 +161,15 @@ export const createItemMints = async (
       })
   );
   return itemMints;
+};
+
+// Fetch the metaplex metadata account associated with the mint passed in
+export const fetchMetadata = async (connection: Connection, mint: PublicKey) => {
+  let [pda, bump] = await PublicKey.findProgramAddress(
+    [textEncoder.encode("metadata"), TOKEN_METADATA.toBuffer(), mint.toBuffer()],
+    TOKEN_METADATA
+  );
+
+  const metadata_account = await connection.getAccountInfo(pda);
+  return decodeMetadata(metadata_account?.data as Buffer);
 };
