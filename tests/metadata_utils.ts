@@ -1,8 +1,7 @@
-import { deserializeUnchecked, BinaryReader, BinaryWriter } from "borsh";
-import { PublicKey } from "@solana/web3.js";
+import { deserializeUnchecked, BinaryReader, BinaryWriter, serialize } from "borsh";
 import BN from "bn.js";
 const base58 = require("bs58");
-
+import { PublicKey } from "@solana/web3.js";
 export type StringPublicKey = string;
 
 export const extendBorsh = () => {
@@ -437,6 +436,7 @@ export const METADATA_SCHEMA = new Map<any, any>([
   ],
 ]);
 
+// eslint-disable-next-line no-control-regex
 const METADATA_REPLACE = new RegExp("\u0000", "g");
 
 export const decodeMetadata = (buffer: Buffer): Metadata => {
