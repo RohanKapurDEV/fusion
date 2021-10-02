@@ -1,7 +1,20 @@
 import * as anchor from "@project-serum/anchor";
-import {createMasterEdition, createMetadata, Creator, Data} from "./metadata_utils";
+import {
+  createMasterEdition,
+  createMetadata,
+  Creator,
+  Data,
+} from "./metadata_utils";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { AccountMeta, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
+import {
+  AccountMeta,
+  Keypair,
+  PublicKey,
+  sendAndConfirmTransaction,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { assert, expect } from "chai";
 import { createIngredientMints, initNewTokenMint } from "./utils";
 import { BN } from "@project-serum/anchor";
@@ -17,7 +30,10 @@ describe("create_formula", () => {
 
   // The mintAuthority for the ingredients (2-to-1 crafting)
   const mintAuthority = anchor.web3.Keypair.generate();
-  let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
+  let ingredientMintA: PublicKey,
+    ingredientMintB: PublicKey,
+    outputMint: PublicKey,
+    outputToken: Token;
 
   // The mintAuthority for the ingredients (4-to-6 crafting)
   const mintAuthorityOne = anchor.web3.Keypair.generate();
@@ -25,9 +41,18 @@ describe("create_formula", () => {
     ingredientMintTwo: PublicKey,
     ingredientMintThree: PublicKey,
     ingredientMintFour: PublicKey;
-  let outputMintOne: PublicKey, outputTokenOne: Token, outputMintTwo: PublicKey, outputTokenTwo: Token;
-  let outputMintThree: PublicKey, outputTokenThree: Token, outputMintFour: PublicKey, outputTokenFour: Token;
-  let outputMintFive: PublicKey, outputTokenFive: Token, outputMintSix: PublicKey, outputTokenSix: Token;
+  let outputMintOne: PublicKey,
+    outputTokenOne: Token,
+    outputMintTwo: PublicKey,
+    outputTokenTwo: Token;
+  let outputMintThree: PublicKey,
+    outputTokenThree: Token,
+    outputMintFour: PublicKey,
+    outputTokenFour: Token;
+  let outputMintFive: PublicKey,
+    outputTokenFive: Token,
+    outputMintSix: PublicKey,
+    outputTokenSix: Token;
 
   before(async () => {
     await provider.connection.confirmTransaction(
@@ -46,9 +71,19 @@ describe("create_formula", () => {
         2
       );
       // create the 1 output mint which is owned by the user
-      const { mintAccount } = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0);
+      const { mintAccount } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      );
       outputMint = mintAccount.publicKey;
-      outputToken = new Token(provider.connection, outputMint, TOKEN_PROGRAM_ID, payer);
+      outputToken = new Token(
+        provider.connection,
+        outputMint,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
     });
 
     it("should create a Formula and transfer the mint authority for output items", async () => {
@@ -107,13 +142,20 @@ describe("create_formula", () => {
       );
 
       // Validate the Formula gets created and stored on chain properly
-      const formula = await program.account.formula.fetch(formulaKeypair.publicKey);
+      const formula = await program.account.formula.fetch(
+        formulaKeypair.publicKey
+      );
       expect(formula).to.eql(expectedFormula);
 
       // Vaidate the mint authority for the output items gets transfered to the formula
       await Promise.all(
         expectedFormula.outputItems.map(async (outputItem) => {
-          const token = new Token(provider.connection, outputItem.mint, TOKEN_PROGRAM_ID, payer);
+          const token = new Token(
+            provider.connection,
+            outputItem.mint,
+            TOKEN_PROGRAM_ID,
+            payer
+          );
           const outputMintAfter = await token.getMintInfo();
           assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda));
         })
@@ -124,7 +166,12 @@ describe("create_formula", () => {
   describe("Four to six crafting", () => {
     before(async () => {
       // create the initial 4 mints (not owned by the user)
-      [ingredientMintOne, ingredientMintTwo, ingredientMintThree, ingredientMintFour] = await createIngredientMints(
+      [
+        ingredientMintOne,
+        ingredientMintTwo,
+        ingredientMintThree,
+        ingredientMintFour,
+      ] = await createIngredientMints(
         provider.connection,
         mintAuthorityOne.publicKey,
         payer,
@@ -132,36 +179,84 @@ describe("create_formula", () => {
       );
 
       // create the 6 output mint which is owned by the user
-      const mintAccountOne = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
-      );
+      const mintAccountOne = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintOne = mintAccountOne.publicKey;
-      outputTokenOne = new Token(provider.connection, outputMintOne, TOKEN_PROGRAM_ID, payer);
-      const mintAccountTwo = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenOne = new Token(
+        provider.connection,
+        outputMintOne,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountTwo = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintTwo = mintAccountTwo.publicKey;
-      outputTokenTwo = new Token(provider.connection, outputMintTwo, TOKEN_PROGRAM_ID, payer);
-      const mintAccountThree = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenTwo = new Token(
+        provider.connection,
+        outputMintTwo,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountThree = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintThree = mintAccountThree.publicKey;
-      outputTokenThree = new Token(provider.connection, outputMintThree, TOKEN_PROGRAM_ID, payer);
-      const mintAccountFour = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenThree = new Token(
+        provider.connection,
+        outputMintThree,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountFour = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintFour = mintAccountFour.publicKey;
-      outputTokenFour = new Token(provider.connection, outputMintFour, TOKEN_PROGRAM_ID, payer);
-      const mintAccountFive = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenFour = new Token(
+        provider.connection,
+        outputMintFour,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountFive = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintFive = mintAccountFive.publicKey;
-      outputTokenFive = new Token(provider.connection, outputMintFive, TOKEN_PROGRAM_ID, payer);
-      const mintAccountSix = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenFive = new Token(
+        provider.connection,
+        outputMintFive,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountSix = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintSix = mintAccountSix.publicKey;
-      outputTokenSix = new Token(provider.connection, outputMintSix, TOKEN_PROGRAM_ID, payer);
+      outputTokenSix = new Token(
+        provider.connection,
+        outputMintSix,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
     });
 
     it("should create a Formula and transfer the mint authority for output items", async () => {
@@ -253,13 +348,20 @@ describe("create_formula", () => {
       );
 
       // Validate the Formula gets created and stored on chain properly
-      const formula = await program.account.formula.fetch(formulaKeypair.publicKey);
+      const formula = await program.account.formula.fetch(
+        formulaKeypair.publicKey
+      );
       expect(formula).to.eql(expectedFormula);
 
       // Vaidate the mint authority for the output items gets transfered to the formula
       await Promise.all(
         expectedFormula.outputItems.map(async (outputItem) => {
-          const token = new Token(provider.connection, outputItem.mint, TOKEN_PROGRAM_ID, payer);
+          const token = new Token(
+            provider.connection,
+            outputItem.mint,
+            TOKEN_PROGRAM_ID,
+            payer
+          );
           const outputMintAfter = await token.getMintInfo();
           assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda));
         })
@@ -268,55 +370,89 @@ describe("create_formula", () => {
   });
 
   describe("Single output as a metaplex Edition", () => {
-    let outputMint: Keypair;
+    let outputToken: Token;
     beforeEach(async () => {
       // Prior to creating the formula, a user must interact with the Token-Metadata contract
       //  to create MasterEditions for all the outputs
 
       // Create new mint for the output
-      ({mintAccount: outputMint} = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0));
-      // TODO: Instruction to Metaplex's Token-Metadata contract to create a new metadata account
+      const { mintAccount: outputMint } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      );
+      outputToken = new Token(
+        provider.connection,
+        outputMint.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
+      // Instruction to Metaplex's Token-Metadata contract to create a new metadata account
       const instructions: TransactionInstruction[] = [];
       const metadataAccount = await createMetadata(
         new Data({
-          symbol: 'SYM',
-          name: 'Name',
-          uri: ' '.repeat(64), // size of url for arweave
+          symbol: "SYM",
+          name: "Name",
+          uri: " ".repeat(64), // size of url for arweave
           sellerFeeBasisPoints: 50,
-          creators: [new Creator({
-            address: payer.publicKey.toString(),
-            verified: true,
-            share: 100
-          })],
+          creators: [
+            new Creator({
+              address: payer.publicKey.toString(),
+              verified: true,
+              share: 100,
+            }),
+          ],
         }),
         payer.publicKey,
         outputMint.publicKey,
         payer.publicKey,
         instructions,
-        payer.publicKey,
+        payer.publicKey
       );
-      // TODO: Instruction to `create_master_edition` on the metadata
+      const recipientKey = await outputToken.createAssociatedTokenAccount(
+        payer.publicKey
+      );
+      // Mint one to the user
+      instructions.push(
+        Token.createMintToInstruction(
+          TOKEN_PROGRAM_ID,
+          outputMint.publicKey,
+          recipientKey,
+          payer.publicKey,
+          [],
+          1
+        )
+      );
+      // Instruction to `create_master_edition` on the metadata
       const maxSupply = undefined;
-      const {mintAccount: masterEdition} = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0);
+      const { mintAccount: masterEdition } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      );
       await createMasterEdition(
         maxSupply !== undefined ? new BN(maxSupply) : undefined,
         outputMint.publicKey,
         payer.publicKey,
         payer.publicKey,
         payer.publicKey,
-        instructions,
+        instructions
       );
       const tx = new Transaction();
-      instructions.forEach(ix => tx.add(ix));
-      const txid = await sendAndConfirmTransaction(provider.connection, tx, [payer])
-      console.log('*** tx id ', txid);
-    })
+      instructions.forEach((ix) => tx.add(ix));
+      const txid = await sendAndConfirmTransaction(provider.connection, tx, [
+        payer,
+      ]);
+      console.log("*** tx id ", txid);
+    });
 
     it("should create new Formula with the output mint", () => {
       // TODO: validate that the program is now the mint authority over the accounts
       assert.ok(true);
-    })
-  })
+    });
+  });
 
   describe("One to one crafting, metaplex edition outputs", () => {
     // Create a formula where the Ingredient has an associated Metadata account

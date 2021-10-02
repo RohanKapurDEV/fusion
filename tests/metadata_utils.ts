@@ -1,10 +1,22 @@
-import { deserializeUnchecked, BinaryReader, BinaryWriter, serialize } from "borsh";
-import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, TransactionInstruction } from "@solana/web3.js";
+import {
+  deserializeUnchecked,
+  BinaryReader,
+  BinaryWriter,
+  serialize,
+} from "borsh";
+import {
+  PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import BN from "bn.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 const base58 = require("bs58");
 
-export const metadataProgramId = new PublicKey("5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC");
+export const metadataProgramId = new PublicKey(
+  "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
+);
 
 export type StringPublicKey = string;
 
@@ -26,7 +38,9 @@ export const extendBorsh = () => {
     return base58.encode(array) as StringPublicKey;
   };
 
-  (BinaryWriter.prototype as any).writePubkeyAsString = function (value: StringPublicKey) {
+  (BinaryWriter.prototype as any).writePubkeyAsString = function (
+    value: StringPublicKey
+  ) {
     const writer = this as unknown as BinaryWriter;
     writer.writeFixedArray(base58.decode(value));
   };
@@ -150,7 +164,8 @@ export class MasterEditionV1 {
     this.supply = args.supply;
     this.maxSupply = args.maxSupply;
     this.printingMint = args.printingMint;
-    this.oneTimePrintingAuthorizationMint = args.oneTimePrintingAuthorizationMint;
+    this.oneTimePrintingAuthorizationMint =
+      args.oneTimePrintingAuthorizationMint;
   }
 }
 
@@ -159,7 +174,11 @@ export class MasterEditionV2 {
   supply: typeof BN;
   maxSupply?: typeof BN;
 
-  constructor(args: { key: MetadataKey; supply: typeof BN; maxSupply?: typeof BN }) {
+  constructor(args: {
+    key: MetadataKey;
+    supply: typeof BN;
+    maxSupply?: typeof BN;
+  }) {
     this.key = MetadataKey.MasterEditionV2;
     this.supply = args.supply;
     this.maxSupply = args.maxSupply;
@@ -200,7 +219,11 @@ export class Edition {
   /// Starting at 0 for master record, this is incremented for each edition minted.
   edition: typeof BN;
 
-  constructor(args: { key: MetadataKey; parent: StringPublicKey; edition: typeof BN }) {
+  constructor(args: {
+    key: MetadataKey;
+    parent: StringPublicKey;
+    edition: typeof BN;
+  }) {
     this.key = MetadataKey.EditionV1;
     this.parent = args.parent;
     this.edition = args.edition;
@@ -211,7 +234,11 @@ export class Creator {
   verified: boolean;
   share: number;
 
-  constructor(args: { address: StringPublicKey; verified: boolean; share: number }) {
+  constructor(args: {
+    address: StringPublicKey;
+    verified: boolean;
+    share: number;
+  }) {
     this.address = args.address;
     this.verified = args.verified;
     this.share = args.share;
@@ -286,7 +313,11 @@ class UpdateMetadataArgs {
   // Not used by this app, just required for instruction
   updateAuthority: StringPublicKey | null;
   primarySaleHappened: boolean | null;
-  constructor(args: { data?: Data; updateAuthority?: string; primarySaleHappened: boolean | null }) {
+  constructor(args: {
+    data?: Data;
+    updateAuthority?: string;
+    primarySaleHappened: boolean | null;
+  }) {
     this.data = args.data ? args.data : null;
     this.updateAuthority = args.updateAuthority ? args.updateAuthority : null;
     this.primarySaleHappened = args.primarySaleHappened;
@@ -443,7 +474,11 @@ export const METADATA_SCHEMA = new Map<any, any>([
 const METADATA_REPLACE = new RegExp("\u0000", "g");
 
 export const decodeMetadata = (buffer: Buffer): Metadata => {
-  const metadata = deserializeUnchecked(METADATA_SCHEMA, Metadata, buffer) as Metadata;
+  const metadata = deserializeUnchecked(
+    METADATA_SCHEMA,
+    Metadata,
+    buffer
+  ) as Metadata;
   metadata.data.name = metadata.data.name.replace(METADATA_REPLACE, "");
   metadata.data.uri = metadata.data.uri.replace(METADATA_REPLACE, "");
   metadata.data.symbol = metadata.data.symbol.replace(METADATA_REPLACE, "");
@@ -456,20 +491,19 @@ export async function createMetadata(
   mintKey: PublicKey,
   mintAuthorityKey: PublicKey,
   instructions: TransactionInstruction[],
-  payer: PublicKey,
+  payer: PublicKey
 ) {
-
   const metadataAccount = (
     await PublicKey.findProgramAddress(
       [
-        Buffer.from('metadata'),
+        Buffer.from("metadata"),
         metadataProgramId.toBuffer(),
         mintKey.toBuffer(),
       ],
-      metadataProgramId,
+      metadataProgramId
     )
   )[0];
-  console.log('Data', data);
+
   const value = new CreateMetadataArgs({ data, isMutable: true });
   const txnData = Buffer.from(serialize(METADATA_SCHEMA, value));
 
@@ -515,12 +549,11 @@ export async function createMetadata(
       keys,
       programId: metadataProgramId,
       data: txnData,
-    }),
+    })
   );
 
   return metadataAccount;
 }
-
 
 export async function createMasterEdition(
   maxSupply: BN | undefined,
@@ -528,9 +561,8 @@ export async function createMasterEdition(
   updateAuthorityKey: PublicKey,
   mintAuthorityKey: PublicKey,
   payer: PublicKey,
-  instructions: TransactionInstruction[],
+  instructions: TransactionInstruction[]
 ) {
-
   const metadataAccount = (
     await PublicKey.findProgramAddress(
       [
@@ -538,7 +570,7 @@ export async function createMasterEdition(
         metadataProgramId.toBuffer(),
         mintKey.toBuffer(),
       ],
-      metadataProgramId,
+      metadataProgramId
     )
   )[0];
 
@@ -550,11 +582,13 @@ export async function createMasterEdition(
         mintKey.toBuffer(),
         Buffer.from(EDITION),
       ],
-      metadataProgramId,
+      metadataProgramId
     )
   )[0];
 
-  const value = new CreateMasterEditionArgs({ maxSupply: maxSupply ? maxSupply : null });
+  const value = new CreateMasterEditionArgs({
+    maxSupply: maxSupply ? maxSupply : null,
+  });
   const data = Buffer.from(serialize(METADATA_SCHEMA, value));
 
   const keys = [
@@ -611,6 +645,6 @@ export async function createMasterEdition(
       keys,
       programId: metadataProgramId,
       data,
-    }),
+    })
   );
 }
