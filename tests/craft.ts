@@ -1,6 +1,12 @@
 import * as anchor from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { AccountMeta, Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import {
+  AccountMeta,
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+} from "@solana/web3.js";
 import { assert, expect } from "chai";
 import { Formula, Ingredient, Item } from "./types";
 import {
@@ -26,7 +32,10 @@ describe("craft", async () => {
 
   // The mintAuthority for the formula's ingredients - 2-to-1 formula
   const mintAuthority = anchor.web3.Keypair.generate();
-  let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
+  let ingredientMintA: PublicKey,
+    ingredientMintB: PublicKey,
+    outputMint: PublicKey,
+    outputToken: Token;
   let formulaKp: Keypair;
 
   // Set up a formula to craft in main test block
@@ -37,11 +46,17 @@ describe("craft", async () => {
       "confirmed"
     );
     await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(crafter.publicKey, 10_000_000_000),
+      await provider.connection.requestAirdrop(
+        crafter.publicKey,
+        10_000_000_000
+      ),
       "confirmed"
     );
     await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(mintAuthority.publicKey, 10_000_000_000),
+      await provider.connection.requestAirdrop(
+        mintAuthority.publicKey,
+        10_000_000_000
+      ),
       "confirmed"
     );
 
@@ -54,11 +69,25 @@ describe("craft", async () => {
     );
 
     // Create output mint
-    const { mintAccount } = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0);
+    const { mintAccount } = await initNewTokenMint(
+      provider.connection,
+      payer.publicKey,
+      payer,
+      0
+    );
     outputMint = mintAccount.publicKey;
-    outputToken = new Token(provider.connection, outputMint, TOKEN_PROGRAM_ID, payer);
+    outputToken = new Token(
+      provider.connection,
+      outputMint,
+      TOKEN_PROGRAM_ID,
+      payer
+    );
 
-    const ingredients = createIngredients([ingredientMintA, ingredientMintB], [1, 1], true);
+    const ingredients = createIngredients(
+      [ingredientMintA, ingredientMintB],
+      [1, 1],
+      true
+    );
     const outputItems = createOutputItems([outputMint], [1]);
 
     const remainingAccounts: AccountMeta[] = outputItems.map((x) => ({
@@ -102,7 +131,9 @@ describe("craft", async () => {
 
   it("Craft the formula", async () => {
     // grab the formula from the chain
-    const formula = (await program.account.formula.fetch(formulaKp.publicKey)) as Formula;
+    const formula = (await program.account.formula.fetch(
+      formulaKp.publicKey
+    )) as Formula;
 
     let remainingAccounts: AccountMeta[] = [];
     let ingredientTokenPubkeys: PublicKey[] = [];
@@ -112,7 +143,11 @@ describe("craft", async () => {
     const starterPromise = Promise.resolve(null);
     await formula.ingredients.reduce(async (accumulator, ingredient) => {
       await accumulator;
-      let craftersTokenAccount = await createAssociatedTokenAccount(provider.connection, crafter, ingredient.mint);
+      let craftersTokenAccount = await createAssociatedTokenAccount(
+        provider.connection,
+        crafter,
+        ingredient.mint
+      );
 
       // Mint the right amount of ingredient tokens to the crafter's ATAs
       await mintTokensToAccount(
@@ -147,7 +182,11 @@ describe("craft", async () => {
     await formula.outputItems.reduce(async (accumulator, item) => {
       await accumulator;
       // Create output item ATAs for crafter
-      const outputItemTokenAccount = await createAssociatedTokenAccount(provider.connection, crafter, item.mint);
+      const outputItemTokenAccount = await createAssociatedTokenAccount(
+        provider.connection,
+        crafter,
+        item.mint
+      );
 
       // Push output item token account
       remainingAccounts.push({
@@ -200,7 +239,9 @@ describe("craft", async () => {
       await accumulator;
 
       const balance = await provider.connection.getTokenAccountBalance(output);
-      assert.ok(formula.outputItems[index].amount.toString() == balance.value.amount);
+      assert.ok(
+        formula.outputItems[index].amount.toString() == balance.value.amount
+      );
 
       return null;
     }, outoutPromiseStart);

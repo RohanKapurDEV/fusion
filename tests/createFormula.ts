@@ -15,7 +15,10 @@ describe("create_formula", () => {
 
   // The mintAuthority for the ingredients (2-to-1 crafting)
   const mintAuthority = anchor.web3.Keypair.generate();
-  let ingredientMintA: PublicKey, ingredientMintB: PublicKey, outputMint: PublicKey, outputToken: Token;
+  let ingredientMintA: PublicKey,
+    ingredientMintB: PublicKey,
+    outputMint: PublicKey,
+    outputToken: Token;
 
   // The mintAuthority for the ingredients (4-to-6 crafting)
   const mintAuthorityOne = anchor.web3.Keypair.generate();
@@ -23,9 +26,18 @@ describe("create_formula", () => {
     ingredientMintTwo: PublicKey,
     ingredientMintThree: PublicKey,
     ingredientMintFour: PublicKey;
-  let outputMintOne: PublicKey, outputTokenOne: Token, outputMintTwo: PublicKey, outputTokenTwo: Token;
-  let outputMintThree: PublicKey, outputTokenThree: Token, outputMintFour: PublicKey, outputTokenFour: Token;
-  let outputMintFive: PublicKey, outputTokenFive: Token, outputMintSix: PublicKey, outputTokenSix: Token;
+  let outputMintOne: PublicKey,
+    outputTokenOne: Token,
+    outputMintTwo: PublicKey,
+    outputTokenTwo: Token;
+  let outputMintThree: PublicKey,
+    outputTokenThree: Token,
+    outputMintFour: PublicKey,
+    outputTokenFour: Token;
+  let outputMintFive: PublicKey,
+    outputTokenFive: Token,
+    outputMintSix: PublicKey,
+    outputTokenSix: Token;
 
   before(async () => {
     await provider.connection.confirmTransaction(
@@ -44,9 +56,19 @@ describe("create_formula", () => {
         2
       );
       // create the 1 output mint which is owned by the user
-      const { mintAccount } = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0);
+      const { mintAccount } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      );
       outputMint = mintAccount.publicKey;
-      outputToken = new Token(provider.connection, outputMint, TOKEN_PROGRAM_ID, payer);
+      outputToken = new Token(
+        provider.connection,
+        outputMint,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
     });
 
     it("should create a Formula and transfer the mint authority for output items", async () => {
@@ -105,13 +127,20 @@ describe("create_formula", () => {
       );
 
       // Validate the Formula gets created and stored on chain properly
-      const formula = await program.account.formula.fetch(formulaKeypair.publicKey);
+      const formula = await program.account.formula.fetch(
+        formulaKeypair.publicKey
+      );
       expect(formula).to.eql(expectedFormula);
 
       // Vaidate the mint authority for the output items gets transfered to the formula
       await Promise.all(
         expectedFormula.outputItems.map(async (outputItem) => {
-          const token = new Token(provider.connection, outputItem.mint, TOKEN_PROGRAM_ID, payer);
+          const token = new Token(
+            provider.connection,
+            outputItem.mint,
+            TOKEN_PROGRAM_ID,
+            payer
+          );
           const outputMintAfter = await token.getMintInfo();
           assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda));
         })
@@ -122,7 +151,12 @@ describe("create_formula", () => {
   describe("Four to six crafting", () => {
     before(async () => {
       // create the initial 4 mints (not owned by the user)
-      [ingredientMintOne, ingredientMintTwo, ingredientMintThree, ingredientMintFour] = await createIngredientMints(
+      [
+        ingredientMintOne,
+        ingredientMintTwo,
+        ingredientMintThree,
+        ingredientMintFour,
+      ] = await createIngredientMints(
         provider.connection,
         mintAuthorityOne.publicKey,
         payer,
@@ -130,36 +164,84 @@ describe("create_formula", () => {
       );
 
       // create the 6 output mint which is owned by the user
-      const mintAccountOne = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
-      );
+      const mintAccountOne = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintOne = mintAccountOne.publicKey;
-      outputTokenOne = new Token(provider.connection, outputMintOne, TOKEN_PROGRAM_ID, payer);
-      const mintAccountTwo = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenOne = new Token(
+        provider.connection,
+        outputMintOne,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountTwo = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintTwo = mintAccountTwo.publicKey;
-      outputTokenTwo = new Token(provider.connection, outputMintTwo, TOKEN_PROGRAM_ID, payer);
-      const mintAccountThree = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenTwo = new Token(
+        provider.connection,
+        outputMintTwo,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountThree = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintThree = mintAccountThree.publicKey;
-      outputTokenThree = new Token(provider.connection, outputMintThree, TOKEN_PROGRAM_ID, payer);
-      const mintAccountFour = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenThree = new Token(
+        provider.connection,
+        outputMintThree,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountFour = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintFour = mintAccountFour.publicKey;
-      outputTokenFour = new Token(provider.connection, outputMintFour, TOKEN_PROGRAM_ID, payer);
-      const mintAccountFive = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenFour = new Token(
+        provider.connection,
+        outputMintFour,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountFive = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintFive = mintAccountFive.publicKey;
-      outputTokenFive = new Token(provider.connection, outputMintFive, TOKEN_PROGRAM_ID, payer);
-      const mintAccountSix = await initNewTokenMint(provider.connection, payer.publicKey, payer, 0).then(
-        (_) => _.mintAccount
+      outputTokenFive = new Token(
+        provider.connection,
+        outputMintFive,
+        TOKEN_PROGRAM_ID,
+        payer
       );
+      const mintAccountSix = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      ).then((_) => _.mintAccount);
       outputMintSix = mintAccountSix.publicKey;
-      outputTokenSix = new Token(provider.connection, outputMintSix, TOKEN_PROGRAM_ID, payer);
+      outputTokenSix = new Token(
+        provider.connection,
+        outputMintSix,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
     });
 
     it("should create a Formula and transfer the mint authority for output items", async () => {
@@ -251,13 +333,20 @@ describe("create_formula", () => {
       );
 
       // Validate the Formula gets created and stored on chain properly
-      const formula = await program.account.formula.fetch(formulaKeypair.publicKey);
+      const formula = await program.account.formula.fetch(
+        formulaKeypair.publicKey
+      );
       expect(formula).to.eql(expectedFormula);
 
       // Vaidate the mint authority for the output items gets transfered to the formula
       await Promise.all(
         expectedFormula.outputItems.map(async (outputItem) => {
-          const token = new Token(provider.connection, outputItem.mint, TOKEN_PROGRAM_ID, payer);
+          const token = new Token(
+            provider.connection,
+            outputItem.mint,
+            TOKEN_PROGRAM_ID,
+            payer
+          );
           const outputMintAfter = await token.getMintInfo();
           assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda));
         })

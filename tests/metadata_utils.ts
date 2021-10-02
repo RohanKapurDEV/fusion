@@ -1,4 +1,9 @@
-import { deserializeUnchecked, BinaryReader, BinaryWriter, serialize } from "borsh";
+import {
+  deserializeUnchecked,
+  BinaryReader,
+  BinaryWriter,
+  serialize,
+} from "borsh";
 import BN from "bn.js";
 const base58 = require("bs58");
 import { PublicKey } from "@solana/web3.js";
@@ -22,7 +27,9 @@ export const extendBorsh = () => {
     return base58.encode(array) as StringPublicKey;
   };
 
-  (BinaryWriter.prototype as any).writePubkeyAsString = function (value: StringPublicKey) {
+  (BinaryWriter.prototype as any).writePubkeyAsString = function (
+    value: StringPublicKey
+  ) {
     const writer = this as unknown as BinaryWriter;
     writer.writeFixedArray(base58.decode(value));
   };
@@ -146,7 +153,8 @@ export class MasterEditionV1 {
     this.supply = args.supply;
     this.maxSupply = args.maxSupply;
     this.printingMint = args.printingMint;
-    this.oneTimePrintingAuthorizationMint = args.oneTimePrintingAuthorizationMint;
+    this.oneTimePrintingAuthorizationMint =
+      args.oneTimePrintingAuthorizationMint;
   }
 }
 
@@ -155,7 +163,11 @@ export class MasterEditionV2 {
   supply: typeof BN;
   maxSupply?: typeof BN;
 
-  constructor(args: { key: MetadataKey; supply: typeof BN; maxSupply?: typeof BN }) {
+  constructor(args: {
+    key: MetadataKey;
+    supply: typeof BN;
+    maxSupply?: typeof BN;
+  }) {
     this.key = MetadataKey.MasterEditionV2;
     this.supply = args.supply;
     this.maxSupply = args.maxSupply;
@@ -196,7 +208,11 @@ export class Edition {
   /// Starting at 0 for master record, this is incremented for each edition minted.
   edition: typeof BN;
 
-  constructor(args: { key: MetadataKey; parent: StringPublicKey; edition: typeof BN }) {
+  constructor(args: {
+    key: MetadataKey;
+    parent: StringPublicKey;
+    edition: typeof BN;
+  }) {
     this.key = MetadataKey.EditionV1;
     this.parent = args.parent;
     this.edition = args.edition;
@@ -207,7 +223,11 @@ export class Creator {
   verified: boolean;
   share: number;
 
-  constructor(args: { address: StringPublicKey; verified: boolean; share: number }) {
+  constructor(args: {
+    address: StringPublicKey;
+    verified: boolean;
+    share: number;
+  }) {
     this.address = args.address;
     this.verified = args.verified;
     this.share = args.share;
@@ -282,7 +302,11 @@ class UpdateMetadataArgs {
   // Not used by this app, just required for instruction
   updateAuthority: StringPublicKey | null;
   primarySaleHappened: boolean | null;
-  constructor(args: { data?: Data; updateAuthority?: string; primarySaleHappened: boolean | null }) {
+  constructor(args: {
+    data?: Data;
+    updateAuthority?: string;
+    primarySaleHappened: boolean | null;
+  }) {
     this.data = args.data ? args.data : null;
     this.updateAuthority = args.updateAuthority ? args.updateAuthority : null;
     this.primarySaleHappened = args.primarySaleHappened;
@@ -440,7 +464,11 @@ export const METADATA_SCHEMA = new Map<any, any>([
 const METADATA_REPLACE = new RegExp("\u0000", "g");
 
 export const decodeMetadata = (buffer: Buffer): Metadata => {
-  const metadata = deserializeUnchecked(METADATA_SCHEMA, Metadata, buffer) as Metadata;
+  const metadata = deserializeUnchecked(
+    METADATA_SCHEMA,
+    Metadata,
+    buffer
+  ) as Metadata;
   metadata.data.name = metadata.data.name.replace(METADATA_REPLACE, "");
   metadata.data.uri = metadata.data.uri.replace(METADATA_REPLACE, "");
   metadata.data.symbol = metadata.data.symbol.replace(METADATA_REPLACE, "");
