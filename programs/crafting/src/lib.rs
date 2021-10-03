@@ -18,7 +18,7 @@ pub mod crafting {
     ) -> ProgramResult {
         let formula = &mut ctx.accounts.formula;
         formula.ingredients = ingredients;
-        formula.output_items = output_items;
+        formula.output_items = output_items.clone();
 
         // Hand over control of the mint account to PDA
         let pda_pubkey = Pubkey::create_program_address(
@@ -29,6 +29,60 @@ pub mod crafting {
             ],
             &ctx.program_id,
         )?;
+
+        let output_iter = &mut ctx.remaining_accounts.iter();
+
+        for item in output_items {
+            let output_mint = next_account_info(output_iter)?;
+
+            if item.is_master_edition {
+                let auth_cpi_accounts = SetAuthority {
+                    account_or_mint: output_mint.clone(),
+                    current_authority: ctx.accounts.authority.to_account_info().clone(),
+                };
+    
+                let auth_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), auth_cpi_accounts);
+                set_authority(auth_cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?; 
+
+                let masteredition_token: &AccountInfo = next_account_info(output_iter)?;
+                let masteredition_pda = next_account_info(output_iter)?;
+                let assoc_token = next_account_info(output_iter)?;
+
+                let create_cpi_accounts = anchor_spl::associated_token::Create {
+                    payer: ctx.accounts.authority.to_account_info(),
+                    associated_token: assoc_token.clone(),
+                    authority: masteredition_pda.clone(),
+                    mint: output_mint.clone(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                    token_program: ctx.accounts.token_program.clone(),
+                    rent: ctx.accounts.rent.to_account_info(),
+                };
+                
+                let create_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), create_cpi_accounts);
+                anchor_spl::associated_token::create(create_cpi_ctx)?;
+
+                let transfer_cpi_accounts = anchor_spl::token::Transfer {
+                    from: masteredition_token.clone(),
+                    to: assoc_token.clone(),
+                    authority: ctx.accounts.authority.to_account_info(),
+                };
+
+                let transfer_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), transfer_cpi_accounts);
+                anchor_spl::token::transfer(transfer_cpi_ctx, 1)?;
+            } else {
+                // If the item isn't a master edition, simply transfer mint authority to the PDA
+                let cpi_accounts = SetAuthority {
+                    account_or_mint: output_mint.clone(),
+                    current_authority: ctx.accounts.authority.to_account_info().clone(),
+                };
+    
+                let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
+                set_authority(cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?;    
+            }
+
+        }
+
+
 
         // Transfer authority of all output item mints to PDA specific to formula
         for output_mint in ctx.remaining_accounts {
@@ -138,6 +192,8 @@ pub struct CreateFormula<'info> {
     pub system_program: Program<'info, System>,
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,
+
+    pub rent: Sysvar<'info, Rent>
 }
 
 #[derive(Accounts)]
@@ -185,6 +241,8 @@ pub struct Item {
     pub mint: Pubkey,
     /// Amount of the token that will be minted on craft
     pub amount: u8,
+    /// Boolean indicating whether or not output mint is a MasterEdition
+    pub is_master_edition: bool
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
