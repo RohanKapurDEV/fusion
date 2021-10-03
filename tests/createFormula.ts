@@ -1,8 +1,23 @@
 import * as anchor from "@project-serum/anchor";
+import {
+  createMasterEdition,
+  createMetadata,
+  Creator,
+  Data,
+} from "./metadata_utils";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { AccountMeta, PublicKey, SystemProgram } from "@solana/web3.js";
+import {
+  AccountMeta,
+  Keypair,
+  PublicKey,
+  sendAndConfirmTransaction,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { assert, expect } from "chai";
 import { createIngredientMints, initNewTokenMint } from "./utils";
+import { BN } from "@project-serum/anchor";
 
 const textEncoder = new TextEncoder();
 
@@ -351,6 +366,91 @@ describe("create_formula", () => {
           assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda));
         })
       );
+    });
+  });
+
+  describe("Single output as a metaplex Edition", () => {
+    let outputToken: Token;
+    beforeEach(async () => {
+      // Prior to creating the formula, a user must interact with the Token-Metadata contract
+      //  to create MasterEditions for all the outputs
+
+      // Create new mint for the output
+      const { mintAccount: outputMint } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      );
+      outputToken = new Token(
+        provider.connection,
+        outputMint.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
+      // Instruction to Metaplex's Token-Metadata contract to create a new metadata account
+      const instructions: TransactionInstruction[] = [];
+      const metadataAccount = await createMetadata(
+        new Data({
+          symbol: "SYM",
+          name: "Name",
+          uri: " ".repeat(64), // size of url for arweave
+          sellerFeeBasisPoints: 50,
+          creators: [
+            new Creator({
+              address: payer.publicKey.toString(),
+              verified: true,
+              share: 100,
+            }),
+          ],
+        }),
+        payer.publicKey,
+        outputMint.publicKey,
+        payer.publicKey,
+        instructions,
+        payer.publicKey
+      );
+      const recipientKey = await outputToken.createAssociatedTokenAccount(
+        payer.publicKey
+      );
+      // Mint one to the user
+      instructions.push(
+        Token.createMintToInstruction(
+          TOKEN_PROGRAM_ID,
+          outputMint.publicKey,
+          recipientKey,
+          payer.publicKey,
+          [],
+          1
+        )
+      );
+      // Instruction to `create_master_edition` on the metadata
+      const maxSupply = undefined;
+      const { mintAccount: masterEdition } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer,
+        0
+      );
+      await createMasterEdition(
+        maxSupply !== undefined ? new BN(maxSupply) : undefined,
+        outputMint.publicKey,
+        payer.publicKey,
+        payer.publicKey,
+        payer.publicKey,
+        instructions
+      );
+      const tx = new Transaction();
+      instructions.forEach((ix) => tx.add(ix));
+      const txid = await sendAndConfirmTransaction(provider.connection, tx, [
+        payer,
+      ]);
+      console.log("*** tx id ", txid);
+    });
+
+    it("should create new Formula with the output mint", () => {
+      // TODO: validate that the program is now the mint authority over the accounts
+      assert.ok(true);
     });
   });
 

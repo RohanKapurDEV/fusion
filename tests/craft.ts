@@ -2,7 +2,6 @@ import * as anchor from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   AccountMeta,
-  Connection,
   Keypair,
   PublicKey,
   SystemProgram,
@@ -108,6 +107,8 @@ describe("craft", async () => {
       [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
       program.programId
     );
+
+    debugger;
 
     await program.rpc.createFormula(
       expectedFormula.ingredients.length,

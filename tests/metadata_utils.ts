@@ -4,9 +4,22 @@ import {
   BinaryWriter,
   serialize,
 } from "borsh";
+
+import {
+  PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+  TransactionInstruction,
+} from "@solana/web3.js";
+
 import BN from "bn.js";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 const base58 = require("bs58");
-import { PublicKey } from "@solana/web3.js";
+
+export const metadataProgramId = new PublicKey(
+  "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
+);
+
 export type StringPublicKey = string;
 
 export const extendBorsh = () => {
@@ -315,8 +328,8 @@ class UpdateMetadataArgs {
 
 class CreateMasterEditionArgs {
   instruction: number = 10;
-  maxSupply: typeof BN | null;
-  constructor(args: { maxSupply: typeof BN | null }) {
+  maxSupply: BN | null;
+  constructor(args: { maxSupply: BN | null }) {
     this.maxSupply = args.maxSupply;
   }
 }
@@ -474,3 +487,167 @@ export const decodeMetadata = (buffer: Buffer): Metadata => {
   metadata.data.symbol = metadata.data.symbol.replace(METADATA_REPLACE, "");
   return metadata;
 };
+
+export async function createMetadata(
+  data: Data,
+  updateAuthority: PublicKey,
+  mintKey: PublicKey,
+  mintAuthorityKey: PublicKey,
+  instructions: TransactionInstruction[],
+  payer: PublicKey
+) {
+  const metadataAccount = (
+    await PublicKey.findProgramAddress(
+      [
+        Buffer.from("metadata"),
+        metadataProgramId.toBuffer(),
+        mintKey.toBuffer(),
+      ],
+      metadataProgramId
+    )
+  )[0];
+
+  const value = new CreateMetadataArgs({ data, isMutable: true });
+  const txnData = Buffer.from(serialize(METADATA_SCHEMA, value));
+
+  const keys = [
+    {
+      pubkey: metadataAccount,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: mintKey,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: mintAuthorityKey,
+      isSigner: true,
+      isWritable: false,
+    },
+    {
+      pubkey: payer,
+      isSigner: true,
+      isWritable: false,
+    },
+    {
+      pubkey: updateAuthority,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: SystemProgram.programId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: SYSVAR_RENT_PUBKEY,
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
+  instructions.push(
+    new TransactionInstruction({
+      keys,
+      programId: metadataProgramId,
+      data: txnData,
+    })
+  );
+
+  return metadataAccount;
+}
+
+export async function createMasterEdition(
+  maxSupply: BN | undefined,
+  mintKey: PublicKey,
+  updateAuthorityKey: PublicKey,
+  mintAuthorityKey: PublicKey,
+  payer: PublicKey,
+  instructions: TransactionInstruction[]
+) {
+  const metadataAccount = (
+    await PublicKey.findProgramAddress(
+      [
+        Buffer.from(METADATA_PREFIX),
+        metadataProgramId.toBuffer(),
+        mintKey.toBuffer(),
+      ],
+      metadataProgramId
+    )
+  )[0];
+
+  const editionAccount = (
+    await PublicKey.findProgramAddress(
+      [
+        Buffer.from(METADATA_PREFIX),
+        metadataProgramId.toBuffer(),
+        mintKey.toBuffer(),
+        Buffer.from(EDITION),
+      ],
+      metadataProgramId
+    )
+  )[0];
+
+  const value = new CreateMasterEditionArgs({
+    maxSupply: maxSupply ? maxSupply : null,
+  });
+  const data = Buffer.from(serialize(METADATA_SCHEMA, value));
+
+  const keys = [
+    {
+      pubkey: editionAccount,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: mintKey,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: updateAuthorityKey,
+      isSigner: true,
+      isWritable: false,
+    },
+    {
+      pubkey: mintAuthorityKey,
+      isSigner: true,
+      isWritable: false,
+    },
+    {
+      pubkey: payer,
+      isSigner: true,
+      isWritable: false,
+    },
+    {
+      pubkey: metadataAccount,
+      isSigner: false,
+      isWritable: false,
+    },
+
+    {
+      pubkey: TOKEN_PROGRAM_ID,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: SystemProgram.programId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: SYSVAR_RENT_PUBKEY,
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
+
+  instructions.push(
+    new TransactionInstruction({
+      keys,
+      programId: metadataProgramId,
+      data,
+    })
+  );
+}
