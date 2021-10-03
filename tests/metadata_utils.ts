@@ -253,6 +253,7 @@ export class Data {
   uri: string;
   sellerFeeBasisPoints: number;
   creators: Creator[] | null;
+
   constructor(args: {
     name: string;
     symbol: string;

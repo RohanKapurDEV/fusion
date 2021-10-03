@@ -453,9 +453,4 @@ describe("create_formula", () => {
       assert.ok(true);
     });
   });
-
-  describe("One to one crafting, metaplex edition outputs", () => {
-    // Create a formula where the Ingredient has an associated Metadata account
-    // and the output is a MasterEdition that can mint new Editions
-  });
 });
