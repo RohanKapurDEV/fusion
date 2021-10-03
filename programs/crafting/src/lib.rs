@@ -57,7 +57,7 @@ pub mod crafting {
                     token_program: ctx.accounts.token_program.clone(),
                     rent: ctx.accounts.rent.to_account_info(),
                 };
-                
+
                 let create_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), create_cpi_accounts);
                 anchor_spl::associated_token::create(create_cpi_ctx)?;
 
@@ -81,20 +81,6 @@ pub mod crafting {
             }
 
         }
-
-
-
-        // Transfer authority of all output item mints to PDA specific to formula
-        for output_mint in ctx.remaining_accounts {
-            let cpi_accounts = SetAuthority {
-                account_or_mint: output_mint.clone(),
-                current_authority: ctx.accounts.authority.to_account_info().clone(),
-            };
-
-            let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
-            set_authority(cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?;
-        }
-
         Ok(())
     }
 
