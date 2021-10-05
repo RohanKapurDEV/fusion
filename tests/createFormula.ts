@@ -12,12 +12,14 @@ import {
   PublicKey,
   sendAndConfirmTransaction,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { assert, expect } from "chai";
 import { createIngredientMints, initNewTokenMint } from "./utils";
 import { BN } from "@project-serum/anchor";
+import { Item } from "./types";
 
 const textEncoder = new TextEncoder();
 
@@ -99,10 +101,11 @@ describe("create_formula", () => {
           burnOnCraft: true,
         },
       ];
-      const outputItems = [
+      const outputItems: Item[] = [
         {
           mint: outputMint,
           amount: 1,
+          isMasterEdition: false,
         },
       ];
 
@@ -135,6 +138,7 @@ describe("create_formula", () => {
             authority: payer.publicKey,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
+            rent: SYSVAR_RENT_PUBKEY,
           },
           remainingAccounts,
           signers: [payer, formulaKeypair],
@@ -283,30 +287,36 @@ describe("create_formula", () => {
         },
       ];
 
-      const outputItems = [
+      const outputItems: Item[] = [
         {
           mint: outputMintOne,
           amount: 1,
+          isMasterEdition: false,
         },
         {
           mint: outputMintTwo,
           amount: 1,
+          isMasterEdition: false,
         },
         {
           mint: outputMintThree,
           amount: 1,
+          isMasterEdition: false,
         },
         {
           mint: outputMintFour,
           amount: 1,
+          isMasterEdition: false,
         },
         {
           mint: outputMintFive,
           amount: 1,
+          isMasterEdition: false,
         },
         {
           mint: outputMintSix,
           amount: 1,
+          isMasterEdition: false,
         },
       ];
 
@@ -341,6 +351,7 @@ describe("create_formula", () => {
             authority: payer.publicKey,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
+            rent: SYSVAR_RENT_PUBKEY,
           },
           remainingAccounts,
           signers: [payer, formulaKeypair],

@@ -14,6 +14,7 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import { decodeMetadata } from "./metadata_utils";
+import { Ingredient, Item } from "./types";
 
 const textEncoder = new TextEncoder();
 const TOKEN_METADATA = new PublicKey(
@@ -150,7 +151,7 @@ export const createIngredients = (
   amountArray: number[],
   burnAll: boolean
 ) => {
-  let ingredients: IngredientType[] = [];
+  let ingredients: Ingredient[] = [];
 
   mintArray.forEach((mint, index) => {
     ingredients.push({
@@ -167,27 +168,18 @@ export const createOutputItems = (
   mintArray: PublicKey[],
   amountArray: number[]
 ) => {
-  let outputItems: OutputItemType[] = [];
+  let outputItems: Item[] = [];
 
   mintArray.forEach((mint, index) => {
     outputItems.push({
       mint: mint,
       amount: amountArray[index],
+      isMasterEdition: false,
     });
   });
 
   return outputItems;
 };
-
-export interface IngredientType {
-  mint: PublicKey;
-  amount: number;
-  burnOnCraft: boolean;
-}
-export interface OutputItemType {
-  mint: PublicKey;
-  amount: number;
-}
 
 export const createItemMints = async (
   connection: Connection,

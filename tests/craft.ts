@@ -5,6 +5,7 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import { assert, expect } from "chai";
 import { Formula, Ingredient, Item } from "./types";
@@ -122,6 +123,7 @@ describe("craft", async () => {
           authority: payer.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
+          rent: SYSVAR_RENT_PUBKEY,
         },
         remainingAccounts,
         signers: [payer, formulaKeypair],
