@@ -6,8 +6,6 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod crafting {
-    use std::convert::TryFrom;
-
     use super::*;
 
     pub fn create_formula<'a, 'b, 'c, 'info>(
