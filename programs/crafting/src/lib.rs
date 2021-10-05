@@ -6,6 +6,8 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod crafting {
+    use std::convert::TryFrom;
+
     use super::*;
 
     pub fn create_formula<'a, 'b, 'c, 'info>(
@@ -20,13 +22,15 @@ pub mod crafting {
         formula.ingredients = ingredients;
         formula.output_items = output_items.clone();
 
+        let output_authority_seeds = &[
+            &"crafting".as_bytes(),
+            &formula.to_account_info().key.to_bytes()[..32],
+            &[bump],
+        ];
+
         // Hand over control of the mint account to PDA
         let pda_pubkey = Pubkey::create_program_address(
-            &[
-                &"crafting".as_bytes(),
-                &formula.to_account_info().key.to_bytes()[..32],
-                &[bump],
-            ],
+            output_authority_seeds,
             &ctx.program_id,
         )?;
 
@@ -40,28 +44,25 @@ pub mod crafting {
                 let cur_master_edition_holder = next_account_info(account_iter)?;
                 let program_master_token_acct = next_account_info(account_iter)?;
 
-                // Create the new TokenAccount for the program
-                let cpi_ctx = token::InitializeAccount {
-                    account: program_master_token_acct.clone(),
-                    mint: output_mint.clone(),
-                    authority: ctx.accounts.output_authority.to_account_info(),
-                    rent: ctx.accounts.rent.to_account_info(),
+                // Validate the SPL Token program owns the accounts
+                if *program_master_token_acct.owner != anchor_spl::token::ID || *cur_master_edition_holder.owner != anchor_spl::token::ID {
+                    return Err(ProgramError::InvalidAccountData.into())
+                }
+                // validate the program_master_token_acct is owned by the output_authority
+                let owner = token::accessor::authority(program_master_token_acct)?;
+                if owner != pda_pubkey {
+                    return Err(ErrorCode::TokenAccountOwnerMustBeOutputMintAuthority.into())
+                }
+
+                // Transfer the MasterEdition token
+                let cpi_accounts = token::Transfer {
+                    from: cur_master_edition_holder.clone(),
+                    to: program_master_token_acct.clone(),
+                    authority: ctx.accounts.authority.to_account_info(),
                 };
-    
-                // let auth_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), auth_cpi_accounts);
-                // set_authority(auth_cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?; 
+                let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
+                token::transfer(cpi_ctx, 1)?;
 
-                // let create_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), create_cpi_accounts);
-                // anchor_spl::associated_token::create(create_cpi_ctx)?;
-
-                // let transfer_cpi_accounts = anchor_spl::token::Transfer {
-                //     from: cur_master_edition_holder.clone(),
-                //     to: program_master_token_acct.clone(),
-                //     authority: ctx.accounts.authority.to_account_info(),
-                // };
-
-                // let transfer_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), transfer_cpi_accounts);
-                // anchor_spl::token::transfer(transfer_cpi_ctx, 1)?;
             } else {
                 // If the item isn't a master edition, simply transfer mint authority to the PDA
                 let cpi_accounts = SetAuthority {
@@ -93,6 +94,10 @@ pub mod crafting {
             let ingredient_token = next_account_info(accounts_info_iter)?;
             let ingredient_mint = next_account_info(accounts_info_iter)?;
 
+            // these accounts are unchecked...check them
+            if *ingredient_token.owner != anchor_spl::token::ID {
+                return Err(ProgramError::InvalidAccountData.into())
+            }
             let token_mint = token::accessor::mint(ingredient_token)?;
             let token_amount = token::accessor::amount(ingredient_token)? as u8;
             let token_authority = token::accessor::authority(ingredient_token)?;
@@ -157,6 +162,8 @@ pub mod crafting {
 #[derive(Accounts)]
 #[instruction(ingredients_count: u16, items_count: u16)]
 pub struct CreateFormula<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
     #[account(
         init,
         payer = authority,
@@ -165,9 +172,6 @@ pub struct CreateFormula<'info> {
     pub formula: Account<'info, Formula>,
     /// The PDA that controls the out minting and transfering
     pub output_authority: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub authority: Signer<'info>,
 
     // Misc accounts
     pub system_program: Program<'info, System>,
@@ -259,4 +263,6 @@ pub enum ErrorCode {
     InvalidAmount,
     #[msg("Invalid token authority")]
     InvalidAuthority,
+    #[msg("TokenAccount must be owned by the output mint authority PDA")]
+    TokenAccountOwnerMustBeOutputMintAuthority
 }

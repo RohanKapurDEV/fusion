@@ -1,4 +1,5 @@
 import {
+  AccountLayout,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   MintLayout,
   Token,
@@ -221,4 +222,42 @@ export const fetchMetadata = async (
 
   const metadata_account = await connection.getAccountInfo(pda);
   return decodeMetadata(metadata_account?.data as Buffer);
+};
+
+export const initNewTokenAccountInstructions = async (
+  connection: Connection,
+  /** The owner for the new TokenAccount */
+  owner: PublicKey,
+  /** The SPL Token Mint address */
+  mint: PublicKey,
+  payer: PublicKey
+) => {
+  const tokenAccount = new Keypair();
+  const transaction = new Transaction();
+
+  const assetPoolRentBalance =
+    await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
+
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer,
+      newAccountPubkey: tokenAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      mint,
+      tokenAccount.publicKey,
+      owner
+    )
+  );
+  return {
+    transaction,
+    tokenAccount,
+    signers: [tokenAccount],
+  };
 };

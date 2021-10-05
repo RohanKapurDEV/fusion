@@ -11,6 +11,7 @@ import {
   Keypair,
   PublicKey,
   sendAndConfirmTransaction,
+  Signer,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
   Transaction,
@@ -20,6 +21,7 @@ import { assert, expect } from "chai";
 import {
   createIngredientMints,
   createIngredients,
+  initNewTokenAccountInstructions,
   initNewTokenMint,
 } from "./utils";
 import { BN } from "@project-serum/anchor";
@@ -453,9 +455,17 @@ describe("create_formula", () => {
       // Generate new keypair for the Formula account
       const formulaKeypair = anchor.web3.Keypair.generate();
 
-      const remainingAccounts: AccountMeta[] = [];
+      const [craftingMintAuthority, craftingMintAuthorityBump] =
+        await PublicKey.findProgramAddress(
+          [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
+          program.programId
+        );
+
+      const remainingAccounts: AccountMeta[] = [],
+        masterTokenAccounts: PublicKey[] = [];
+      let instructions: TransactionInstruction[] = [],
+        signers: Signer[] = [];
       const starterPromise = Promise.resolve(null);
-      let masterTokenAccounts: PublicKey[] = [];
       await outputItems.reduce(async (accumulator, item) => {
         await accumulator;
         // Push the output mint
@@ -472,28 +482,32 @@ describe("create_formula", () => {
             isWritable: true,
             isSigner: false,
           });
-          // We also need to push the new TokenAccount that the program controls
-          const [masterTokenAccount] = await PublicKey.findProgramAddress(
-            [item.mint.toBuffer(), textEncoder.encode("masterToken")],
-            program.programId
+          // Create the master TokenAccount for the program...this could be
+          //  moved inside the instruction but we've decided to offload to the client for now.
+          const {
+            transaction,
+            signers: newTokenAccountSigners,
+            tokenAccount: masterTokenAccount,
+          } = await initNewTokenAccountInstructions(
+            program.provider.connection,
+            craftingMintAuthority,
+            masterToken.publicKey,
+            provider.wallet.publicKey
           );
+          instructions = [...instructions, ...transaction.instructions];
+          signers = [...signers, ...newTokenAccountSigners];
+          // We also need to push the new TokenAccount that the program controls
           remainingAccounts.push({
-            pubkey: masterTokenAccount,
+            pubkey: masterTokenAccount.publicKey,
             isWritable: true,
             isSigner: false,
           });
           // Store the master token account so we can test
-          masterTokenAccounts.push(masterTokenAccount);
+          masterTokenAccounts.push(masterTokenAccount.publicKey);
         }
         return null;
       }, starterPromise);
 
-      const [craftingMintAuthority, craftingMintAuthorityBump] =
-        await PublicKey.findProgramAddress(
-          [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
-          program.programId
-        );
-      console.log("*** formula", formula, remainingAccounts);
       try {
         await program.rpc.createFormula(
           formula.ingredients.length,
@@ -511,7 +525,8 @@ describe("create_formula", () => {
               rent: SYSVAR_RENT_PUBKEY,
             },
             remainingAccounts,
-            signers: [payer, formulaKeypair],
+            instructions: instructions ? instructions : undefined,
+            signers: [payer, formulaKeypair, ...signers],
           }
         );
       } catch (err) {
@@ -521,13 +536,12 @@ describe("create_formula", () => {
 
       assert.ok(true);
 
-      // TODO: Validate that the program now controls the MasterEdition token
+      // Validate that the program now controls the MasterEdition token
       await Promise.all(
         masterTokenAccounts.map(async (masterTokenAccount) => {
           const programMasterTokenInfo = await masterToken.getAccountInfo(
             masterTokenAccount
           );
-          console.log("*** programMasterTokenInfo", programMasterTokenInfo);
           assert.ok(programMasterTokenInfo.amount.eqn(1));
         })
       );
