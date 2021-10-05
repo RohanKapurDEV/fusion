@@ -546,7 +546,11 @@ describe("create_formula", () => {
         })
       );
 
-      // TODO: Validate that the original masterEditionHolder no longer has it
+      // Validate that the original masterEditionHolder no longer has it
+      const oldHolerInfo = await masterToken.getAccountInfo(
+        masterEditionHolder
+      );
+      assert.ok(oldHolerInfo.amount.eqn(0));
     });
   });
 });
