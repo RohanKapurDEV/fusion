@@ -17,9 +17,13 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { assert, expect } from "chai";
-import { createIngredientMints, initNewTokenMint } from "./utils";
+import {
+  createIngredientMints,
+  createIngredients,
+  initNewTokenMint,
+} from "./utils";
 import { BN } from "@project-serum/anchor";
-import { Item } from "./types";
+import { Formula, Ingredient, Item } from "./types";
 
 const textEncoder = new TextEncoder();
 
@@ -34,8 +38,7 @@ describe("create_formula", () => {
   const mintAuthority = anchor.web3.Keypair.generate();
   let ingredientMintA: PublicKey,
     ingredientMintB: PublicKey,
-    outputMint: PublicKey,
-    outputToken: Token;
+    outputMint: PublicKey;
 
   // The mintAuthority for the ingredients (4-to-6 crafting)
   const mintAuthorityOne = anchor.web3.Keypair.generate();
@@ -44,17 +47,11 @@ describe("create_formula", () => {
     ingredientMintThree: PublicKey,
     ingredientMintFour: PublicKey;
   let outputMintOne: PublicKey,
-    outputTokenOne: Token,
     outputMintTwo: PublicKey,
-    outputTokenTwo: Token;
-  let outputMintThree: PublicKey,
-    outputTokenThree: Token,
+    outputMintThree: PublicKey,
     outputMintFour: PublicKey,
-    outputTokenFour: Token;
-  let outputMintFive: PublicKey,
-    outputTokenFive: Token,
-    outputMintSix: PublicKey,
-    outputTokenSix: Token;
+    outputMintFive: PublicKey,
+    outputMintSix: PublicKey;
 
   before(async () => {
     await provider.connection.confirmTransaction(
@@ -80,12 +77,6 @@ describe("create_formula", () => {
         0
       );
       outputMint = mintAccount.publicKey;
-      outputToken = new Token(
-        provider.connection,
-        outputMint,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
     });
 
     it("should create a Formula and transfer the mint authority for output items", async () => {
@@ -121,21 +112,23 @@ describe("create_formula", () => {
       // Generate new keypair for the Formula account
       const formulaKeypair = anchor.web3.Keypair.generate();
 
-      const [outMintPda, outBump] = await PublicKey.findProgramAddress(
-        [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
-        program.programId
-      );
+      const [craftingMintAuthority, craftingMintAuthorityBump] =
+        await PublicKey.findProgramAddress(
+          [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
+          program.programId
+        );
 
       await program.rpc.createFormula(
         expectedFormula.ingredients.length,
         expectedFormula.outputItems.length,
         expectedFormula.ingredients,
         expectedFormula.outputItems,
-        outBump,
+        craftingMintAuthorityBump,
         {
           accounts: {
             formula: formulaKeypair.publicKey,
             authority: payer.publicKey,
+            outputAuthority: craftingMintAuthority,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             rent: SYSVAR_RENT_PUBKEY,
@@ -161,7 +154,9 @@ describe("create_formula", () => {
             payer
           );
           const outputMintAfter = await token.getMintInfo();
-          assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda));
+          assert.ok(
+            outputMintAfter.mintAuthority?.equals(craftingMintAuthority)
+          );
         })
       );
     });
@@ -190,12 +185,6 @@ describe("create_formula", () => {
         0
       ).then((_) => _.mintAccount);
       outputMintOne = mintAccountOne.publicKey;
-      outputTokenOne = new Token(
-        provider.connection,
-        outputMintOne,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
       const mintAccountTwo = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -203,12 +192,6 @@ describe("create_formula", () => {
         0
       ).then((_) => _.mintAccount);
       outputMintTwo = mintAccountTwo.publicKey;
-      outputTokenTwo = new Token(
-        provider.connection,
-        outputMintTwo,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
       const mintAccountThree = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -216,12 +199,6 @@ describe("create_formula", () => {
         0
       ).then((_) => _.mintAccount);
       outputMintThree = mintAccountThree.publicKey;
-      outputTokenThree = new Token(
-        provider.connection,
-        outputMintThree,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
       const mintAccountFour = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -229,12 +206,6 @@ describe("create_formula", () => {
         0
       ).then((_) => _.mintAccount);
       outputMintFour = mintAccountFour.publicKey;
-      outputTokenFour = new Token(
-        provider.connection,
-        outputMintFour,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
       const mintAccountFive = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -242,12 +213,6 @@ describe("create_formula", () => {
         0
       ).then((_) => _.mintAccount);
       outputMintFive = mintAccountFive.publicKey;
-      outputTokenFive = new Token(
-        provider.connection,
-        outputMintFive,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
       const mintAccountSix = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -255,12 +220,6 @@ describe("create_formula", () => {
         0
       ).then((_) => _.mintAccount);
       outputMintSix = mintAccountSix.publicKey;
-      outputTokenSix = new Token(
-        provider.connection,
-        outputMintSix,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
     });
 
     it("should create a Formula and transfer the mint authority for output items", async () => {
@@ -334,21 +293,23 @@ describe("create_formula", () => {
       // Generate new keypair for the Formula account
       const formulaKeypair = anchor.web3.Keypair.generate();
 
-      const [outMintPda, outBump] = await PublicKey.findProgramAddress(
-        [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
-        program.programId
-      );
+      const [craftingMintAuthority, craftingMintAuthorityBump] =
+        await PublicKey.findProgramAddress(
+          [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
+          program.programId
+        );
 
       await program.rpc.createFormula(
         expectedFormula.ingredients.length,
         expectedFormula.outputItems.length,
         expectedFormula.ingredients,
         expectedFormula.outputItems,
-        outBump,
+        craftingMintAuthorityBump,
         {
           accounts: {
             formula: formulaKeypair.publicKey,
             authority: payer.publicKey,
+            outputAuthority: craftingMintAuthority,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             rent: SYSVAR_RENT_PUBKEY,
@@ -374,14 +335,19 @@ describe("create_formula", () => {
             payer
           );
           const outputMintAfter = await token.getMintInfo();
-          assert.ok(outputMintAfter.mintAuthority?.equals(outMintPda));
+          assert.ok(
+            outputMintAfter.mintAuthority?.equals(craftingMintAuthority)
+          );
         })
       );
     });
   });
 
   describe("Single output as a metaplex Edition", () => {
-    let outputToken: Token;
+    let masterToken: Token,
+      masterEditionHolder: PublicKey,
+      ingredientMintA: PublicKey,
+      ingredientMintB: PublicKey;
     beforeEach(async () => {
       // Prior to creating the formula, a user must interact with the Token-Metadata contract
       //  to create MasterEditions for all the outputs
@@ -393,7 +359,7 @@ describe("create_formula", () => {
         payer,
         0
       );
-      outputToken = new Token(
+      masterToken = new Token(
         provider.connection,
         outputMint.publicKey,
         TOKEN_PROGRAM_ID,
@@ -421,7 +387,7 @@ describe("create_formula", () => {
         instructions,
         payer.publicKey
       );
-      const recipientKey = await outputToken.createAssociatedTokenAccount(
+      masterEditionHolder = await masterToken.createAssociatedTokenAccount(
         payer.publicKey
       );
       // Mint one to the user
@@ -429,7 +395,7 @@ describe("create_formula", () => {
         Token.createMintToInstruction(
           TOKEN_PROGRAM_ID,
           outputMint.publicKey,
-          recipientKey,
+          masterEditionHolder,
           payer.publicKey,
           [],
           1
@@ -456,12 +422,117 @@ describe("create_formula", () => {
       const txid = await sendAndConfirmTransaction(provider.connection, tx, [
         payer,
       ]);
-      console.log("*** tx id ", txid);
+
+      // Create ingredient mints
+      [ingredientMintA, ingredientMintB] = await createIngredientMints(
+        provider.connection,
+        mintAuthority.publicKey,
+        payer,
+        2
+      );
     });
 
-    it("should create new Formula with the output mint", () => {
-      // TODO: validate that the program is now the mint authority over the accounts
+    it("should create new Formula with the output mint", async () => {
+      const ingredients: Ingredient[] = createIngredients(
+        [ingredientMintA, ingredientMintB],
+        [1, 1],
+        true
+      );
+      const outputItems: Item[] = [
+        {
+          mint: masterToken.publicKey,
+          amount: 1,
+          isMasterEdition: true,
+        },
+      ];
+      const formula: Formula = {
+        ingredients,
+        outputItems,
+      };
+
+      // Generate new keypair for the Formula account
+      const formulaKeypair = anchor.web3.Keypair.generate();
+
+      const remainingAccounts: AccountMeta[] = [];
+      const starterPromise = Promise.resolve(null);
+      let masterTokenAccounts: PublicKey[] = [];
+      await outputItems.reduce(async (accumulator, item) => {
+        await accumulator;
+        // Push the output mint
+        remainingAccounts.push({
+          pubkey: item.mint,
+          isWritable: true,
+          isSigner: false,
+        });
+
+        if (item.isMasterEdition) {
+          // If the output is a Metaplex MasterEdition we need to push the TokenAccount holding the current MasterEdition
+          remainingAccounts.push({
+            pubkey: masterEditionHolder,
+            isWritable: true,
+            isSigner: false,
+          });
+          // We also need to push the new TokenAccount that the program controls
+          const [masterTokenAccount] = await PublicKey.findProgramAddress(
+            [item.mint.toBuffer(), textEncoder.encode("masterToken")],
+            program.programId
+          );
+          remainingAccounts.push({
+            pubkey: masterTokenAccount,
+            isWritable: true,
+            isSigner: false,
+          });
+          // Store the master token account so we can test
+          masterTokenAccounts.push(masterTokenAccount);
+        }
+        return null;
+      }, starterPromise);
+
+      const [craftingMintAuthority, craftingMintAuthorityBump] =
+        await PublicKey.findProgramAddress(
+          [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
+          program.programId
+        );
+      console.log("*** formula", formula, remainingAccounts);
+      try {
+        await program.rpc.createFormula(
+          formula.ingredients.length,
+          formula.outputItems.length,
+          formula.ingredients,
+          formula.outputItems,
+          craftingMintAuthorityBump,
+          {
+            accounts: {
+              formula: formulaKeypair.publicKey,
+              authority: payer.publicKey,
+              outputAuthority: craftingMintAuthority,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: SystemProgram.programId,
+              rent: SYSVAR_RENT_PUBKEY,
+            },
+            remainingAccounts,
+            signers: [payer, formulaKeypair],
+          }
+        );
+      } catch (err) {
+        console.error(err);
+        throw err;
+      }
+
       assert.ok(true);
+
+      // TODO: Validate that the program now controls the MasterEdition token
+      await Promise.all(
+        masterTokenAccounts.map(async (masterTokenAccount) => {
+          const programMasterTokenInfo = await masterToken.getAccountInfo(
+            masterTokenAccount
+          );
+          console.log("*** programMasterTokenInfo", programMasterTokenInfo);
+          assert.ok(programMasterTokenInfo.amount.eqn(1));
+        })
+      );
+
+      // TODO: Validate that the original masterEditionHolder no longer has it
     });
   });
 });

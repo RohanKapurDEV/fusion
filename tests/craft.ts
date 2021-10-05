@@ -104,10 +104,11 @@ describe("craft", async () => {
     // Generate new keypair for the Formula account
     const formulaKeypair = anchor.web3.Keypair.generate();
 
-    const [outMintPda, outBump] = await PublicKey.findProgramAddress(
-      [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
-      program.programId
-    );
+    const [craftingMintAuthority, craftingMintAuthorityBump] =
+      await PublicKey.findProgramAddress(
+        [textEncoder.encode("crafting"), formulaKeypair.publicKey.toBuffer()],
+        program.programId
+      );
 
     debugger;
 
@@ -116,11 +117,12 @@ describe("craft", async () => {
       expectedFormula.outputItems.length,
       expectedFormula.ingredients,
       expectedFormula.outputItems,
-      outBump,
+      craftingMintAuthorityBump,
       {
         accounts: {
           formula: formulaKeypair.publicKey,
           authority: payer.publicKey,
+          outputAuthority: craftingMintAuthority,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
           rent: SYSVAR_RENT_PUBKEY,

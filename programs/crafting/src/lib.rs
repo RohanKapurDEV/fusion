@@ -30,45 +30,38 @@ pub mod crafting {
             &ctx.program_id,
         )?;
 
-        let output_iter = &mut ctx.remaining_accounts.iter();
+        let account_iter = &mut ctx.remaining_accounts.iter();
 
         for item in output_items {
-            let output_mint = next_account_info(output_iter)?;
+            let output_mint = next_account_info(account_iter)?;
 
             if item.is_master_edition {
-                let auth_cpi_accounts = SetAuthority {
-                    account_or_mint: output_mint.clone(),
-                    current_authority: ctx.accounts.authority.to_account_info().clone(),
-                };
-    
-                let auth_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), auth_cpi_accounts);
-                set_authority(auth_cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?; 
+                msg!("item.is_master_edition");
+                let cur_master_edition_holder = next_account_info(account_iter)?;
+                let program_master_token_acct = next_account_info(account_iter)?;
 
-                let masteredition_token: &AccountInfo = next_account_info(output_iter)?;
-                let masteredition_pda = next_account_info(output_iter)?;
-                let assoc_token = next_account_info(output_iter)?;
-
-                let create_cpi_accounts = anchor_spl::associated_token::Create {
-                    payer: ctx.accounts.authority.to_account_info(),
-                    associated_token: assoc_token.clone(),
-                    authority: masteredition_pda.clone(),
+                // Create the new TokenAccount for the program
+                let cpi_ctx = token::InitializeAccount {
+                    account: program_master_token_acct.clone(),
                     mint: output_mint.clone(),
-                    system_program: ctx.accounts.system_program.to_account_info(),
-                    token_program: ctx.accounts.token_program.clone(),
+                    authority: ctx.accounts.output_authority.to_account_info(),
                     rent: ctx.accounts.rent.to_account_info(),
                 };
+    
+                // let auth_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), auth_cpi_accounts);
+                // set_authority(auth_cpi_ctx, AuthorityType::MintTokens.into(), Some(pda_pubkey))?; 
 
-                let create_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), create_cpi_accounts);
-                anchor_spl::associated_token::create(create_cpi_ctx)?;
+                // let create_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), create_cpi_accounts);
+                // anchor_spl::associated_token::create(create_cpi_ctx)?;
 
-                let transfer_cpi_accounts = anchor_spl::token::Transfer {
-                    from: masteredition_token.clone(),
-                    to: assoc_token.clone(),
-                    authority: ctx.accounts.authority.to_account_info(),
-                };
+                // let transfer_cpi_accounts = anchor_spl::token::Transfer {
+                //     from: cur_master_edition_holder.clone(),
+                //     to: program_master_token_acct.clone(),
+                //     authority: ctx.accounts.authority.to_account_info(),
+                // };
 
-                let transfer_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), transfer_cpi_accounts);
-                anchor_spl::token::transfer(transfer_cpi_ctx, 1)?;
+                // let transfer_cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), transfer_cpi_accounts);
+                // anchor_spl::token::transfer(transfer_cpi_ctx, 1)?;
             } else {
                 // If the item isn't a master edition, simply transfer mint authority to the PDA
                 let cpi_accounts = SetAuthority {
@@ -170,6 +163,8 @@ pub struct CreateFormula<'info> {
         space = 8 + 32 + 1 + 34 * ingredients_count as usize + 33 * items_count as usize
     )]
     pub formula: Account<'info, Formula>,
+    /// The PDA that controls the out minting and transfering
+    pub output_authority: AccountInfo<'info>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
