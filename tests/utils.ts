@@ -1,3 +1,4 @@
+import { BN, Provider } from "@project-serum/anchor";
 import {
   AccountLayout,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -13,8 +14,15 @@ import {
   sendAndConfirmTransaction,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
-import { decodeMetadata } from "./metadata_utils";
+import {
+  createMasterEdition,
+  createMetadata,
+  Creator,
+  Data,
+  decodeMetadata,
+} from "./metadata_utils";
 import { Ingredient, Item } from "./types";
 
 const textEncoder = new TextEncoder();
@@ -22,11 +30,12 @@ const TOKEN_METADATA = new PublicKey(
   "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
 );
 
-export const initNewTokenMint = async (
+export const initNewTokenMintInstruction = async (
   connection: Connection,
   /** The owner for the new mint account */
   owner: PublicKey,
-  wallet: Keypair,
+  /** The public key that should be signing the TX and paying for the new account's rent */
+  payer: PublicKey,
   decimals: number = 8
 ) => {
   const mintAccount = new Keypair();
@@ -39,7 +48,7 @@ export const initNewTokenMint = async (
 
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
+      fromPubkey: payer,
       newAccountPubkey: mintAccount.publicKey,
       lamports: mintRentBalance,
       space: MintLayout.span,
@@ -55,10 +64,31 @@ export const initNewTokenMint = async (
       null
     )
   );
+  return {
+    transaction,
+    signers: [mintAccount],
+    mintAccount,
+  };
+};
+
+export const initNewTokenMint = async (
+  connection: Connection,
+  /** The owner for the new mint account */
+  owner: PublicKey,
+  wallet: Keypair,
+  decimals: number = 8
+) => {
+  const { transaction, signers, mintAccount } =
+    await initNewTokenMintInstruction(
+      connection,
+      owner,
+      wallet.publicKey,
+      decimals
+    );
   await sendAndConfirmTransaction(
     connection,
     transaction,
-    [wallet, mintAccount],
+    [wallet, ...signers],
     {
       commitment: "confirmed",
     }
@@ -260,4 +290,87 @@ export const initNewTokenAccountInstructions = async (
     tokenAccount,
     signers: [tokenAccount],
   };
+};
+
+export const setupMetaplexMasterEdition = async (provider: Provider) => {
+  let masterEditionHolder: PublicKey;
+  // Prior to creating the formula, a user must interact with the Token-Metadata contract
+  //  to create MasterEditions for all the outputs
+
+  // Create new mint for the output
+  const {
+    transaction,
+    signers,
+    mintAccount: outputMint,
+  } = await initNewTokenMintInstruction(
+    provider.connection,
+    provider.wallet.publicKey,
+    provider.wallet.publicKey,
+    0
+  );
+
+  // Instruction to Metaplex's Token-Metadata contract to create a new metadata account
+  const instructions: TransactionInstruction[] = [];
+  const metadataAccount = await createMetadata(
+    new Data({
+      symbol: "SYM",
+      name: "Name",
+      uri: " ".repeat(64), // size of url for arweave
+      sellerFeeBasisPoints: 50,
+      creators: [
+        new Creator({
+          address: provider.wallet.publicKey.toString(),
+          verified: true,
+          share: 100,
+        }),
+      ],
+    }),
+    provider.wallet.publicKey,
+    outputMint.publicKey,
+    provider.wallet.publicKey,
+    instructions,
+    provider.wallet.publicKey
+  );
+
+  // Get and create the associated token account for the holder
+  masterEditionHolder = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    outputMint.publicKey,
+    provider.wallet.publicKey
+  );
+  transaction.add(
+    Token.createAssociatedTokenAccountInstruction(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      outputMint.publicKey,
+      masterEditionHolder,
+      provider.wallet.publicKey,
+      provider.wallet.publicKey
+    )
+  );
+  // Mint one to the user
+  transaction.add(
+    Token.createMintToInstruction(
+      TOKEN_PROGRAM_ID,
+      outputMint.publicKey,
+      masterEditionHolder,
+      provider.wallet.publicKey,
+      [],
+      1
+    )
+  );
+  // Instruction to `create_master_edition` on the metadata
+  const maxSupply = undefined;
+  await createMasterEdition(
+    maxSupply !== undefined ? new BN(maxSupply) : undefined,
+    outputMint.publicKey,
+    provider.wallet.publicKey,
+    provider.wallet.publicKey,
+    provider.wallet.publicKey,
+    instructions
+  );
+  instructions.forEach((ix) => transaction.add(ix));
+  await provider.send(transaction, [...signers]);
+  return { masterEditionHolder, masterTokenKey: outputMint.publicKey };
 };
