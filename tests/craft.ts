@@ -1,4 +1,5 @@
 import * as anchor from "@project-serum/anchor";
+import { BN } from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   AccountMeta,
@@ -427,12 +428,19 @@ describe("craft", async () => {
       await formula.outputItems.reduce(async (accumulator, item) => {
         await accumulator;
         if (item.isMasterEdition) {
-          // TODO: add the remaining accounts for the master edition print
-          // const outputPrintAccounts = await createAccountsForOutputPrint(
-          //   provider,
-          //   craftingMintAuthority
-          // );
-          // remainingAccounts = [...remainingAccounts, ...outputPrintAccounts];
+          if (!item.masterTokenAccount) {
+            throw new Error("There should be a masterTokenAccount on the item");
+          }
+          // add the remaining accounts for the master edition print
+          const outputPrintAccounts = await createAccountsForOutputPrint(
+            provider,
+            craftingMintAuthority,
+            item.masterTokenAccount,
+            craftingMintAuthority,
+            item,
+            new BN(1)
+          );
+          remainingAccounts = [...remainingAccounts, ...outputPrintAccounts];
         } else {
           // Create output item ATAs for crafter
           const outputItemTokenAccount = await createAssociatedTokenAccount(

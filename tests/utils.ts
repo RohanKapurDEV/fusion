@@ -385,6 +385,7 @@ export const createAccountsForOutputPrint = async (
   tokenOwner: PublicKey,
   /** The TokenAccount that holds the master mint */
   tokenAccount: PublicKey,
+  /** Still not 100% sure whether this is the PublicKey that is creating the new Edition, or the key that has authority to update the metadata */
   newUpdateAuthority: PublicKey,
   item: Item,
   edition: BN

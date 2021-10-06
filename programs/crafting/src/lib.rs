@@ -88,9 +88,10 @@ pub mod crafting {
         let expected_remaining = formula.ingredients.len() * 2 + formula.output_items.len() * 2;
         let accounts_info_iter = &mut ctx.remaining_accounts.iter();
 
-        if ctx.remaining_accounts.len() != expected_remaining {
-            return Err(ErrorCode::InvalidRemainingAccountsLength.into());
-        }
+        msg!("remaining accounts length {:?}", ctx.remaining_accounts.len());
+        // if ctx.remaining_accounts.len() != expected_remaining {
+        //     return Err(ErrorCode::InvalidRemainingAccountsLength.into());
+        // }
 
         for ingredient in formula.ingredients.iter() {
             let ingredient_token = next_account_info(accounts_info_iter)?;
@@ -143,19 +144,23 @@ pub mod crafting {
 
         for item in formula.output_items.iter() {
             // TODO: handle case where the output Item is a master edition
-            let output_item_token = next_account_info(accounts_info_iter)?;
-            let output_item_mint = next_account_info(accounts_info_iter)?;
+            if item.is_master_edition {
+                msg!("Item is a master edition! Print that mother F@#!$");
+            } else {
+                let output_item_token = next_account_info(accounts_info_iter)?;
+                let output_item_mint = next_account_info(accounts_info_iter)?;
 
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.clone(),
-                MintTo {
-                    mint: output_item_mint.clone(),
-                    authority: ctx.accounts.pda_auth.clone(),
-                    to: output_item_token.clone(),
-                },
-                signer,
-            );
-            mint_to(cpi_ctx, item.amount as u64)?;
+                let cpi_ctx = CpiContext::new_with_signer(
+                    ctx.accounts.token_program.clone(),
+                    MintTo {
+                        mint: output_item_mint.clone(),
+                        authority: ctx.accounts.pda_auth.clone(),
+                        to: output_item_token.clone(),
+                    },
+                    signer,
+                );
+                mint_to(cpi_ctx, item.amount as u64)?;
+            }
         }
 
         Ok(())
