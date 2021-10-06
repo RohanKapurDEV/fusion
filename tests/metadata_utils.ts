@@ -139,8 +139,8 @@ export interface IMetadataExtension {
 
 export class MasterEditionV1 {
   key: MetadataKey;
-  supply: typeof BN;
-  maxSupply?: typeof BN;
+  supply: BN;
+  maxSupply?: BN;
   /// Can be used to mint tokens that give one-time permission to mint a single limited edition.
   printingMint: StringPublicKey;
   /// If you don't know how many printing tokens you are going to need, but you do know
@@ -157,8 +157,8 @@ export class MasterEditionV1 {
 
   constructor(args: {
     key: MetadataKey;
-    supply: typeof BN;
-    maxSupply?: typeof BN;
+    supply: BN;
+    maxSupply?: BN;
     printingMint: StringPublicKey;
     oneTimePrintingAuthorizationMint: StringPublicKey;
   }) {
@@ -173,14 +173,10 @@ export class MasterEditionV1 {
 
 export class MasterEditionV2 {
   key: MetadataKey;
-  supply: typeof BN;
-  maxSupply?: typeof BN;
+  supply: BN;
+  maxSupply?: BN;
 
-  constructor(args: {
-    key: MetadataKey;
-    supply: typeof BN;
-    maxSupply?: typeof BN;
-  }) {
+  constructor(args: { key: MetadataKey; supply: BN; maxSupply?: BN }) {
     this.key = MetadataKey.MasterEditionV2;
     this.supply = args.supply;
     this.maxSupply = args.maxSupply;
@@ -474,6 +470,24 @@ export const METADATA_SCHEMA = new Map<any, any>([
   ],
 ]);
 
+export const decodeMasterEdition = (
+  buffer: Buffer
+): MasterEditionV1 | MasterEditionV2 => {
+  if (buffer[0] == MetadataKey.MasterEditionV1) {
+    return deserializeUnchecked(
+      METADATA_SCHEMA,
+      MasterEditionV1,
+      buffer
+    ) as MasterEditionV1;
+  } else {
+    return deserializeUnchecked(
+      METADATA_SCHEMA,
+      MasterEditionV2,
+      buffer
+    ) as MasterEditionV2;
+  }
+};
+
 // eslint-disable-next-line no-control-regex
 const METADATA_REPLACE = new RegExp("\u0000", "g");
 
@@ -651,6 +665,7 @@ export async function createMasterEdition(
       data,
     })
   );
+  return { editionAccount };
 }
 
 export const getMetadata = async (tokenMint: PublicKey) =>

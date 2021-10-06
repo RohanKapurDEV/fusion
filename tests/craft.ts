@@ -11,6 +11,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { assert, expect } from "chai";
+import { decodeMasterEdition } from "./metadata_utils";
 import { Formula, Ingredient, Item } from "./types";
 import {
   createIngredientMints,
@@ -267,10 +268,12 @@ describe("craft", async () => {
   });
 
   describe("2-to-1 Metaplex print output formula", () => {
+    let masterEditionKey: PublicKey;
     beforeEach(async () => {
       // TODO: create the metaplex output info
-      const { masterEditionHolder, masterTokenKey } =
+      const { masterEditionHolder, masterTokenKey, editionAccount } =
         await setupMetaplexMasterEdition(provider);
+      masterEditionKey = editionAccount;
       // Create ingredient mints
       [ingredientMintA, ingredientMintB] = await createIngredientMints(
         provider.connection,
@@ -375,6 +378,18 @@ describe("craft", async () => {
     });
 
     it("should craft a new print", async () => {
+      // Get and deserialize the master edition info
+      const masterEditionInfoBefore = await provider.connection.getAccountInfo(
+        masterEditionKey
+      );
+      if (!masterEditionInfoBefore) {
+        throw new Error("masterEditionInfoBefore account does not exist");
+      }
+      const masterEditionBefore = decodeMasterEdition(
+        masterEditionInfoBefore.data
+      );
+      assert.ok(masterEditionBefore.supply.eqn(0));
+
       // grab the formula from the chain
       const formula = (await program.account.formula.fetch(
         formulaKp.publicKey
@@ -483,7 +498,18 @@ describe("craft", async () => {
         console.error(err);
         throw err;
       }
-      assert.ok(true);
+
+      // Check that the master token's metadata edition number incremented
+      const masterEditionInfoAfter = await provider.connection.getAccountInfo(
+        masterEditionKey
+      );
+      if (!masterEditionInfoAfter) {
+        throw new Error("masterEditionInfoAfter account does not exist");
+      }
+      const masterEditionAfter = decodeMasterEdition(
+        masterEditionInfoAfter.data
+      );
+      assert.ok(masterEditionAfter.supply.eqn(1));
     });
   });
 });

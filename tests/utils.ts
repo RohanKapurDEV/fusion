@@ -366,7 +366,7 @@ export const setupMetaplexMasterEdition = async (provider: Provider) => {
   );
   // Instruction to `create_master_edition` on the metadata
   const maxSupply = undefined;
-  await createMasterEdition(
+  const { editionAccount } = await createMasterEdition(
     maxSupply !== undefined ? new BN(maxSupply) : undefined,
     outputMint.publicKey,
     provider.wallet.publicKey,
@@ -376,7 +376,11 @@ export const setupMetaplexMasterEdition = async (provider: Provider) => {
   );
   instructions.forEach((ix) => transaction.add(ix));
   await provider.send(transaction, [...signers]);
-  return { masterEditionHolder, masterTokenKey: outputMint.publicKey };
+  return {
+    masterEditionHolder,
+    masterTokenKey: outputMint.publicKey,
+    editionAccount,
+  };
 };
 
 export const createAccountsForOutputPrint = async (
@@ -431,15 +435,15 @@ export const createAccountsForOutputPrint = async (
   );
   await provider.send(transaction, signers);
 
-  // TODO: get metadata for the newMint
+  // get metadata for the newMint
   const [newMetadataKey] = await getMetadata(mintAccount.publicKey);
-  // TODO: get metadata for the masterMint
+  // get metadata for the masterMint
   const [masterMetadataKey] = await getMetadata(item.mint);
-  // TODO: get Edition for the newMint
+  // get Edition for the newMint
   const [newEdition] = await getEdition(mintAccount.publicKey);
-  // TODO: get Edition for the master mint
+  // get Edition for the master mint
   const [masterEdition] = await getEdition(item.mint);
-  // TODO: get EditionMarkPDA for the masterMint and the Edition
+  // get EditionMarkPDA for the masterMint and the Edition
   const [editionMarkPda] = await getEditionMarkPda(item.mint, edition);
   /* 
     To understand what accounts are needed for each output print, refer to the instruction creation 
