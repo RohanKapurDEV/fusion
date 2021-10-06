@@ -18,7 +18,7 @@ pub mod crafting {
     ) -> ProgramResult {
         let formula = &mut ctx.accounts.formula;
         formula.ingredients = ingredients;
-        formula.output_items = output_items.clone();
+        let mut new_output_items = output_items.clone();
 
         let output_authority_seeds = &[
             &"crafting".as_bytes(),
@@ -34,7 +34,7 @@ pub mod crafting {
 
         let account_iter = &mut ctx.remaining_accounts.iter();
 
-        for item in output_items {
+        for (index, item) in output_items.iter().enumerate() {
             let output_mint = next_account_info(account_iter)?;
 
             if item.is_master_edition {
@@ -61,6 +61,9 @@ pub mod crafting {
                 let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
                 token::transfer(cpi_ctx, 1)?;
 
+                // Update the master_token_account on item so it is correct
+                new_output_items[index].master_token_account = *program_master_token_acct.key;
+
             } else {
                 // If the item isn't a master edition, simply transfer mint authority to the PDA
                 let cpi_accounts = SetAuthority {
@@ -73,6 +76,7 @@ pub mod crafting {
             }
 
         }
+        formula.output_items = new_output_items;
         Ok(())
     }
 
@@ -93,7 +97,7 @@ pub mod crafting {
             let ingredient_mint = next_account_info(accounts_info_iter)?;
 
             // these accounts are unchecked...check them
-            if *ingredient_token.owner != anchor_spl::token::ID {
+            if *ingredient_token.owner != anchor_spl::token::ID || *ingredient_mint.owner != anchor_spl::token::ID {
                 return Err(ProgramError::InvalidAccountData.into())
             }
             let token_mint = token::accessor::mint(ingredient_token)?;
@@ -138,6 +142,7 @@ pub mod crafting {
         let signer = &[&seeds[..]];
 
         for item in formula.output_items.iter() {
+            // TODO: handle case where the output Item is a master edition
             let output_item_token = next_account_info(accounts_info_iter)?;
             let output_item_mint = next_account_info(accounts_info_iter)?;
 
@@ -165,7 +170,7 @@ pub struct CreateFormula<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + 32 + 1 + 34 * ingredients_count as usize + 33 * items_count as usize
+        space = 8 + 32 + 1 + 34 * ingredients_count as usize + 65 * items_count as usize
     )]
     pub formula: Account<'info, Formula>,
     /// The PDA that controls the out minting and transfering
@@ -217,7 +222,7 @@ pub struct Ingredient {
     pub burn_on_craft: bool,
 }
 
-/// Size: 32 + 1 = 33 bytes
+/// Size: 32 + 1 + 1 + 32 = 66 bytes
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct Item {
     /// Pubkey of the item's token mint
@@ -225,7 +230,10 @@ pub struct Item {
     /// Amount of the token that will be minted on craft
     pub amount: u8,
     /// Boolean indicating whether or not output mint is a MasterEdition
-    pub is_master_edition: bool
+    pub is_master_edition: bool,
+    // TODO: This could be removed if using a PDA
+    /// The key for the token account that holds the master edition token
+    pub master_token_account: Pubkey,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]

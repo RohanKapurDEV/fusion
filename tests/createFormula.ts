@@ -108,6 +108,7 @@ describe("create_formula", () => {
         isWritable: true,
         isSigner: false,
       }));
+      console.log("*** ", SystemProgram.programId.toString());
       const expectedFormula = {
         ingredients,
         outputItems,
@@ -404,7 +405,7 @@ describe("create_formula", () => {
       let instructions: TransactionInstruction[] = [],
         signers: Signer[] = [];
       const starterPromise = Promise.resolve(null);
-      await outputItems.reduce(async (accumulator, item) => {
+      await outputItems.reduce(async (accumulator, item, index) => {
         await accumulator;
         // Push the output mint
         remainingAccounts.push({
@@ -489,6 +490,16 @@ describe("create_formula", () => {
         masterEditionHolder
       );
       assert.ok(oldHolerInfo.amount.eqn(0));
+
+      const onChainFormula = await program.account.formula.fetch(
+        formulaKeypair.publicKey
+      );
+
+      assert.ok(
+        masterTokenAccounts[0].equals(
+          onChainFormula.outputItems[0].masterTokenAccount
+        )
+      );
     });
   });
 });

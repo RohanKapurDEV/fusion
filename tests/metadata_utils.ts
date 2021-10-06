@@ -652,3 +652,38 @@ export async function createMasterEdition(
     })
   );
 }
+
+export const getMetadata = async (tokenMint: PublicKey) =>
+  PublicKey.findProgramAddress(
+    [
+      Buffer.from("metadata"),
+      metadataProgramId.toBuffer(),
+      tokenMint.toBuffer(),
+    ],
+    metadataProgramId
+  );
+
+export const getEdition = async (tokenMint: PublicKey) =>
+  PublicKey.findProgramAddress(
+    [
+      Buffer.from("metadata"),
+      metadataProgramId.toBuffer(),
+      tokenMint.toBuffer(),
+      Buffer.from("edition"),
+    ],
+    metadataProgramId
+  );
+
+export const getEditionMarkPda = async (tokenMint: PublicKey, edition: BN) => {
+  const editionNumber = Math.floor(edition.toNumber() / 248);
+  return PublicKey.findProgramAddress(
+    [
+      Buffer.from("metadata"),
+      metadataProgramId.toBuffer(),
+      tokenMint.toBuffer(),
+      Buffer.from("edition"),
+      Buffer.from(editionNumber.toString()),
+    ],
+    metadataProgramId
+  );
+};

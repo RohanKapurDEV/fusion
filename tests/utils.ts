@@ -8,6 +8,7 @@ import {
 } from "@solana/spl-token";
 
 import {
+  AccountMeta,
   Connection,
   Keypair,
   PublicKey,
@@ -22,18 +23,21 @@ import {
   Creator,
   Data,
   decodeMetadata,
+  getEdition,
+  getEditionMarkPda,
+  getMetadata,
 } from "./metadata_utils";
 import { Ingredient, Item } from "./types";
 
 const textEncoder = new TextEncoder();
-const TOKEN_METADATA = new PublicKey(
+export const TOKEN_METADATA = new PublicKey(
   "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
 );
 
 export const initNewTokenMintInstruction = async (
   connection: Connection,
-  /** The owner for the new mint account */
-  owner: PublicKey,
+  /** The mint authority for the new mint account */
+  mintAuthority: PublicKey,
   /** The public key that should be signing the TX and paying for the new account's rent */
   payer: PublicKey,
   decimals: number = 8
@@ -60,7 +64,7 @@ export const initNewTokenMintInstruction = async (
       TOKEN_PROGRAM_ID,
       mintAccount.publicKey,
       decimals,
-      owner,
+      mintAuthority,
       null
     )
   );
@@ -373,4 +377,126 @@ export const setupMetaplexMasterEdition = async (provider: Provider) => {
   instructions.forEach((ix) => transaction.add(ix));
   await provider.send(transaction, [...signers]);
   return { masterEditionHolder, masterTokenKey: outputMint.publicKey };
+};
+
+export const createAccountsForOutputPrint = async (
+  provider: Provider,
+  /** Root account that owns the master mint (This should be the crafting formula's output mint authority) */
+  tokenOwner: PublicKey,
+  /** The TokenAccount that holds the master mint */
+  tokenAccount: PublicKey,
+  newUpdateAuthority: PublicKey,
+  item: Item,
+  edition: BN
+) => {
+  const newMintAuthority: PublicKey = provider.wallet.publicKey;
+  // First we have to create a Mint account
+  const { transaction, signers, mintAccount } =
+    await initNewTokenMintInstruction(
+      provider.connection,
+      newMintAuthority,
+      provider.wallet.publicKey,
+      0
+    );
+
+  // Then we have to create a TokenAccount account for that mint
+  const holderAddress = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    mintAccount.publicKey,
+    provider.wallet.publicKey
+  );
+  transaction.add(
+    Token.createAssociatedTokenAccountInstruction(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      mintAccount.publicKey,
+      holderAddress,
+      provider.wallet.publicKey,
+      provider.wallet.publicKey
+    )
+  );
+
+  // Then we have to mint 1 to the TokenAccount
+  transaction.add(
+    Token.createMintToInstruction(
+      TOKEN_PROGRAM_ID,
+      mintAccount.publicKey,
+      holderAddress,
+      newMintAuthority,
+      [],
+      1
+    )
+  );
+  await provider.send(transaction, signers);
+
+  // TODO: get metadata for the newMint
+  const [newMetadataKey] = await getMetadata(mintAccount.publicKey);
+  // TODO: get metadata for the masterMint
+  const [masterMetadataKey] = await getMetadata(item.mint);
+  // TODO: get Edition for the newMint
+  const [newEdition] = await getEdition(mintAccount.publicKey);
+  // TODO: get Edition for the master mint
+  const [masterEdition] = await getEdition(item.mint);
+  // TODO: get EditionMarkPDA for the masterMint and the Edition
+  const [editionMarkPda] = await getEditionMarkPda(item.mint, edition);
+  /* 
+    To understand what accounts are needed for each output print, refer to the instruction creation 
+    https://docs.rs/spl-token-metadata/0.0.1/src/spl_token_metadata/instruction.rs.html#388-442
+    
+    TODO: There are some optimizations for duplicate accounts when more than one printed output mint
+   */
+  const accountMetas: AccountMeta[] = [
+    {
+      pubkey: newMetadataKey,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: newEdition,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: masterEdition,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: mintAccount.publicKey,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: editionMarkPda,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: newMintAuthority,
+      isWritable: false,
+      isSigner: true,
+    },
+    {
+      pubkey: tokenOwner,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: tokenAccount,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: newUpdateAuthority,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: masterMetadataKey,
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
+  return accountMetas;
 };

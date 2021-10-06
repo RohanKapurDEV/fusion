@@ -10,6 +10,7 @@ export type Item = {
   mint: PublicKey;
   amount: number;
   isMasterEdition: boolean;
+  masterTokenAccount?: PublicKey;
 };
 
 export type Formula = {
