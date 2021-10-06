@@ -385,6 +385,7 @@ export const setupMetaplexMasterEdition = async (provider: Provider) => {
 
 export const createAccountsForOutputPrint = async (
   provider: Provider,
+  masterMetadataMintKey: PublicKey,
   /** Root account that owns the master mint (This should be the crafting formula's output mint authority) */
   tokenOwner: PublicKey,
   /** The TokenAccount that holds the master mint */
@@ -453,6 +454,11 @@ export const createAccountsForOutputPrint = async (
    */
   const accountMetas: AccountMeta[] = [
     {
+      pubkey: TOKEN_METADATA,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
       pubkey: newMetadataKey,
       isWritable: true,
       isSigner: false,
@@ -499,6 +505,11 @@ export const createAccountsForOutputPrint = async (
     },
     {
       pubkey: masterMetadataKey,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: masterMetadataMintKey,
       isSigner: false,
       isWritable: false,
     },

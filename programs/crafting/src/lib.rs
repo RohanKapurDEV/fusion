@@ -1,3 +1,5 @@
+pub mod token_metadata_utils;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, burn, mint_to, set_authority, Burn, MintTo, SetAuthority};
 
@@ -143,9 +145,16 @@ pub mod crafting {
         let signer = &[&seeds[..]];
 
         for item in formula.output_items.iter() {
-            // TODO: handle case where the output Item is a master edition
+            // handle case where the output Item is a master edition
             if item.is_master_edition {
                 msg!("Item is a master edition! Print that mother F@#!$");
+                token_metadata_utils::mint_new_edition_cpi(
+                    accounts_info_iter,
+                    &ctx.accounts.authority.to_account_info(),
+                    &ctx.accounts.system_program.to_account_info(),
+                    &ctx.accounts.rent.to_account_info(),
+                    signer
+                )?;
             } else {
                 let output_item_token = next_account_info(accounts_info_iter)?;
                 let output_item_mint = next_account_info(accounts_info_iter)?;
@@ -205,6 +214,8 @@ pub struct Craft<'info> {
 
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>
 }
 
 #[account]

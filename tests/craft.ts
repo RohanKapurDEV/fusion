@@ -227,6 +227,8 @@ describe("craft", async () => {
             formula: formulaKp.publicKey,
             pdaAuth: outMintPda,
             tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            rent: SYSVAR_RENT_PUBKEY,
           },
           remainingAccounts,
           signers: [crafter],
@@ -268,12 +270,13 @@ describe("craft", async () => {
   });
 
   describe("2-to-1 Metaplex print output formula", () => {
-    let masterEditionKey: PublicKey;
+    let masterEditionKey: PublicKey, masterTokenMintKey: PublicKey;
     beforeEach(async () => {
-      // TODO: create the metaplex output info
+      // create the metaplex output info
       const { masterEditionHolder, masterTokenKey, editionAccount } =
         await setupMetaplexMasterEdition(provider);
       masterEditionKey = editionAccount;
+      masterTokenMintKey = masterTokenKey;
       // Create ingredient mints
       [ingredientMintA, ingredientMintB] = await createIngredientMints(
         provider.connection,
@@ -449,6 +452,7 @@ describe("craft", async () => {
           // add the remaining accounts for the master edition print
           const outputPrintAccounts = await createAccountsForOutputPrint(
             provider,
+            masterTokenMintKey,
             craftingMintAuthority,
             item.masterTokenAccount,
             craftingMintAuthority,
@@ -490,6 +494,8 @@ describe("craft", async () => {
             formula: formulaKp.publicKey,
             pdaAuth: craftingMintAuthority,
             tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            rent: SYSVAR_RENT_PUBKEY,
           },
           remainingAccounts,
           signers: [crafter],

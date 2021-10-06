@@ -108,7 +108,6 @@ describe("create_formula", () => {
         isWritable: true,
         isSigner: false,
       }));
-      console.log("*** ", SystemProgram.programId.toString());
       const expectedFormula = {
         ingredients,
         outputItems,
