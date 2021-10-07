@@ -185,7 +185,9 @@ pub struct CreateFormula<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + 32 + 1 + 34 * ingredients.len() as usize + 65 * output_items.len() as usize
+        // The 8 is to account for anchors hash prefix
+        // The 4 is for the u32 Vec::len
+        space = 8 + 4 + std::mem::size_of::<Ingredient>() * ingredients.len() as usize + 4 + std::mem::size_of::<Item>() * output_items.len() as usize
     )]
     pub formula: Account<'info, Formula>,
     /// The PDA that controls the out minting and transfering
