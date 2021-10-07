@@ -1,4 +1,5 @@
 pub mod token_metadata_utils;
+pub mod token_utils;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, burn, mint_to, set_authority, Burn, MintTo, SetAuthority};
@@ -16,13 +17,11 @@ pub mod crafting {
         output_items: Vec<Item>,
         bump: u8, // Run `find_program_address` offchain for canonical bump
     ) -> ProgramResult {
-        let formula = &mut ctx.accounts.formula;
-        formula.ingredients = ingredients;
         let mut new_output_items = output_items.clone();
 
         let output_authority_seeds = &[
             &"crafting".as_bytes(),
-            &formula.to_account_info().key.to_bytes()[..32],
+            &ctx.accounts.formula.key().to_bytes()[..32],
             &[bump],
         ];
 
@@ -43,14 +42,22 @@ pub mod crafting {
                 let program_master_token_acct = next_account_info(account_iter)?;
 
                 // Validate the SPL Token program owns the accounts
-                if *program_master_token_acct.owner != anchor_spl::token::ID || *cur_master_edition_holder.owner != anchor_spl::token::ID {
+                if *cur_master_edition_holder.owner != anchor_spl::token::ID {
                     return Err(ProgramError::InvalidAccountData.into())
                 }
-                // validate the program_master_token_acct is owned by the output_authority
-                let owner = token::accessor::authority(program_master_token_acct)?;
-                if owner != pda_pubkey {
-                    return Err(ErrorCode::TokenAccountOwnerMustBeOutputMintAuthority.into())
-                }
+                // Create the new master token account
+                token_utils::create_master_token_account(
+                    &ctx.accounts.formula.key(),
+                    &item.mint,
+                    ctx.accounts.authority.to_account_info(),
+                    program_master_token_acct.clone(),
+                    output_mint.clone(),
+                    ctx.accounts.output_authority.to_account_info(),
+                    ctx.accounts.token_program.to_account_info(),
+                    ctx.accounts.rent.to_account_info(),
+                    ctx.accounts.system_program.to_account_info(),
+                    output_authority_seeds
+                )?;
 
                 // Transfer the MasterEdition token
                 let cpi_accounts = token::Transfer {
@@ -76,6 +83,9 @@ pub mod crafting {
             }
 
         }
+
+        let formula = &mut ctx.accounts.formula;
+        formula.ingredients = ingredients;
         formula.output_items = new_output_items;
         Ok(())
     }
@@ -186,7 +196,7 @@ pub struct CreateFormula<'info> {
         init,
         payer = authority,
         // The 8 is to account for anchors hash prefix
-        // The 4 is for the u32 Vec::len
+        // The 4's are for the u32 Vec::len
         space = 8 + 4 + std::mem::size_of::<Ingredient>() * ingredients.len() as usize + 4 + std::mem::size_of::<Item>() * output_items.len() as usize
     )]
     pub formula: Account<'info, Formula>,
@@ -289,5 +299,7 @@ pub enum ErrorCode {
     #[msg("Invalid token authority")]
     InvalidAuthority,
     #[msg("TokenAccount must be owned by the output mint authority PDA")]
-    TokenAccountOwnerMustBeOutputMintAuthority
+    TokenAccountOwnerMustBeOutputMintAuthority,
+    #[msg("Master Token account does not matched derived address")]
+    MasterTokenAccountMismatch
 }

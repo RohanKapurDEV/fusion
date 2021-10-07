@@ -1,4 +1,4 @@
-import { BN, Provider } from "@project-serum/anchor";
+import { BN, Program, Provider } from "@project-serum/anchor";
 import {
   AccountLayout,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -515,4 +515,62 @@ export const createAccountsForOutputPrint = async (
     },
   ];
   return accountMetas;
+};
+
+export const deriveMasterTokenAccount = (
+  formulaKey: PublicKey,
+  itemMint: PublicKey,
+  programId: PublicKey
+) =>
+  PublicKey.findProgramAddress(
+    [
+      formulaKey.toBuffer(),
+      itemMint.toBuffer(),
+      textEncoder.encode("masterTokenAcct"),
+    ],
+    programId
+  );
+
+export const processOutputItems = async (
+  program: Program,
+  formulaKey: PublicKey,
+  outputItems: Item[],
+  masterEditionHolders: PublicKey[],
+  remainingAccounts: AccountMeta[],
+  masterTokenAccounts: PublicKey[]
+) => {
+  const starterPromise = Promise.resolve(null);
+  await outputItems.reduce(async (accumulator, item, index) => {
+    await accumulator;
+    // Push the output mint
+    remainingAccounts.push({
+      pubkey: item.mint,
+      isWritable: true,
+      isSigner: false,
+    });
+
+    if (item.isMasterEdition) {
+      // If the output is a Metaplex MasterEdition we need to push the TokenAccount holding the current MasterEdition
+      remainingAccounts.push({
+        pubkey: masterEditionHolders[index],
+        isWritable: true,
+        isSigner: false,
+      });
+
+      const [masterTokenAccount] = await deriveMasterTokenAccount(
+        formulaKey,
+        item.mint,
+        program.programId
+      );
+      // We also need to push the new TokenAccount that the program controls
+      remainingAccounts.push({
+        pubkey: masterTokenAccount,
+        isWritable: true,
+        isSigner: false,
+      });
+      // Store the master token account so we can test
+      masterTokenAccounts.push(masterTokenAccount);
+    }
+    return null;
+  }, starterPromise);
 };

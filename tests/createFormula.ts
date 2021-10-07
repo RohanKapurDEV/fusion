@@ -21,8 +21,10 @@ import { assert, expect } from "chai";
 import {
   createIngredientMints,
   createIngredients,
+  deriveMasterTokenAccount,
   initNewTokenAccountInstructions,
   initNewTokenMint,
+  processOutputItems,
   setupMetaplexMasterEdition,
 } from "./utils";
 import { BN } from "@project-serum/anchor";
@@ -402,50 +404,14 @@ describe("create_formula", () => {
 
       const remainingAccounts: AccountMeta[] = [],
         masterTokenAccounts: PublicKey[] = [];
-      let instructions: TransactionInstruction[] = [],
-        signers: Signer[] = [];
-      const starterPromise = Promise.resolve(null);
-      await outputItems.reduce(async (accumulator, item, index) => {
-        await accumulator;
-        // Push the output mint
-        remainingAccounts.push({
-          pubkey: item.mint,
-          isWritable: true,
-          isSigner: false,
-        });
-
-        if (item.isMasterEdition) {
-          // If the output is a Metaplex MasterEdition we need to push the TokenAccount holding the current MasterEdition
-          remainingAccounts.push({
-            pubkey: masterEditionHolder,
-            isWritable: true,
-            isSigner: false,
-          });
-          // Create the master TokenAccount for the program...this could be
-          //  moved inside the instruction but we've decided to offload to the client for now.
-          const {
-            transaction,
-            signers: newTokenAccountSigners,
-            tokenAccount: masterTokenAccount,
-          } = await initNewTokenAccountInstructions(
-            program.provider.connection,
-            craftingMintAuthority,
-            masterToken.publicKey,
-            provider.wallet.publicKey
-          );
-          instructions = [...instructions, ...transaction.instructions];
-          signers = [...signers, ...newTokenAccountSigners];
-          // We also need to push the new TokenAccount that the program controls
-          remainingAccounts.push({
-            pubkey: masterTokenAccount.publicKey,
-            isWritable: true,
-            isSigner: false,
-          });
-          // Store the master token account so we can test
-          masterTokenAccounts.push(masterTokenAccount.publicKey);
-        }
-        return null;
-      }, starterPromise);
+      await processOutputItems(
+        program,
+        formulaKeypair.publicKey,
+        formula.outputItems,
+        [masterEditionHolder],
+        remainingAccounts,
+        masterTokenAccounts
+      );
 
       try {
         await program.rpc.createFormula(
@@ -462,8 +428,7 @@ describe("create_formula", () => {
               rent: SYSVAR_RENT_PUBKEY,
             },
             remainingAccounts,
-            instructions: instructions ? instructions : undefined,
-            signers: [formulaKeypair, ...signers],
+            signers: [formulaKeypair],
           }
         );
       } catch (err) {
