@@ -453,16 +453,6 @@ describe("create_formula", () => {
         masterEditionHolder
       );
       assert.ok(oldHolerInfo.amount.eqn(0));
-
-      const onChainFormula = await program.account.formula.fetch(
-        formulaKeypair.publicKey
-      );
-
-      assert.ok(
-        masterTokenAccounts[0].equals(
-          onChainFormula.outputItems[0].masterTokenAccount
-        )
-      );
     });
   });
 });

@@ -24,6 +24,7 @@ import {
   initNewTokenAccountInstructions,
   createAccountsForOutputPrint,
   processOutputItems,
+  deriveMasterTokenAccount,
 } from "./utils";
 
 const textEncoder = new TextEncoder();
@@ -406,15 +407,18 @@ describe("craft", async () => {
       await formula.outputItems.reduce(async (accumulator, item) => {
         await accumulator;
         if (item.isMasterEdition) {
-          if (!item.masterTokenAccount) {
-            throw new Error("There should be a masterTokenAccount on the item");
-          }
+          // Derive the masterTokenKey
+          const [masterTokenAccount] = await deriveMasterTokenAccount(
+            formulaKp.publicKey,
+            item.mint,
+            program.programId
+          );
           // add the remaining accounts for the master edition print
           const outputPrintAccounts = await createAccountsForOutputPrint(
             provider,
             masterTokenMintKey,
             craftingMintAuthority,
-            item.masterTokenAccount,
+            masterTokenAccount,
             craftingMintAuthority,
             item,
             new BN(1)

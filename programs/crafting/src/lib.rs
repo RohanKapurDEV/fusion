@@ -68,9 +68,6 @@ pub mod crafting {
                 let cpi_ctx = CpiContext::new(ctx.accounts.token_program.clone(), cpi_accounts);
                 token::transfer(cpi_ctx, 1)?;
 
-                // Update the master_token_account on item so it is correct
-                new_output_items[index].master_token_account = *program_master_token_acct.key;
-
             } else {
                 // If the item isn't a master edition, simply transfer mint authority to the PDA
                 let cpi_accounts = SetAuthority {
@@ -260,9 +257,6 @@ pub struct Item {
     pub amount: u8,
     /// Boolean indicating whether or not output mint is a MasterEdition
     pub is_master_edition: bool,
-    // TODO: This could be removed if using a PDA
-    /// The key for the token account that holds the master edition token
-    pub master_token_account: Pubkey,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
