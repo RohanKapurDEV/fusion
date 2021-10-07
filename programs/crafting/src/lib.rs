@@ -12,8 +12,6 @@ pub mod crafting {
 
     pub fn create_formula<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, CreateFormula<'info>>,
-        _ingredients_count: u16, // The number of ingredients in the formula
-        _items_count: u16,       // The number of items output by the formula
         ingredients: Vec<Ingredient>,
         output_items: Vec<Item>,
         bump: u8, // Run `find_program_address` offchain for canonical bump
@@ -177,14 +175,17 @@ pub mod crafting {
 }
 
 #[derive(Accounts)]
-#[instruction(ingredients_count: u16, items_count: u16)]
+#[instruction(
+    ingredients: Vec<Ingredient>,
+    output_items: Vec<Item>
+)]
 pub struct CreateFormula<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     #[account(
         init,
         payer = authority,
-        space = 8 + 32 + 1 + 34 * ingredients_count as usize + 65 * items_count as usize
+        space = 8 + 32 + 1 + 34 * ingredients.len() as usize + 65 * output_items.len() as usize
     )]
     pub formula: Account<'info, Formula>,
     /// The PDA that controls the out minting and transfering

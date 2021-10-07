@@ -123,8 +123,6 @@ describe("craft", async () => {
       debugger;
 
       await program.rpc.createFormula(
-        expectedFormula.ingredients.length,
-        expectedFormula.outputItems.length,
         expectedFormula.ingredients,
         expectedFormula.outputItems,
         craftingMintAuthorityBump,
@@ -359,8 +357,6 @@ describe("craft", async () => {
       }, starterPromise);
 
       await program.rpc.createFormula(
-        formula.ingredients.length,
-        formula.outputItems.length,
         formula.ingredients,
         formula.outputItems,
         craftingMintAuthorityBump,

@@ -122,8 +122,6 @@ describe("create_formula", () => {
         );
 
       await program.rpc.createFormula(
-        expectedFormula.ingredients.length,
-        expectedFormula.outputItems.length,
         expectedFormula.ingredients,
         expectedFormula.outputItems,
         craftingMintAuthorityBump,
@@ -308,8 +306,6 @@ describe("create_formula", () => {
         );
 
       await program.rpc.createFormula(
-        expectedFormula.ingredients.length,
-        expectedFormula.outputItems.length,
         expectedFormula.ingredients,
         expectedFormula.outputItems,
         craftingMintAuthorityBump,
@@ -453,8 +449,6 @@ describe("create_formula", () => {
 
       try {
         await program.rpc.createFormula(
-          formula.ingredients.length,
-          formula.outputItems.length,
           formula.ingredients,
           formula.outputItems,
           craftingMintAuthorityBump,
