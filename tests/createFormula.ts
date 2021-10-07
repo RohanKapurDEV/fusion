@@ -145,7 +145,12 @@ describe("create_formula", () => {
       const formula = await program.account.formula.fetch(
         formulaKeypair.publicKey
       );
-      expect(formula).to.eql(expectedFormula);
+      expect(formula.ingredients).to.eql(expectedFormula.ingredients);
+      const output = formula.outputItems.map((x: Item) => {
+        delete x.masterTokenAccount;
+        return x;
+      });
+      expect(output).to.eql(expectedFormula.outputItems);
 
       // Vaidate the mint authority for the output items gets transfered to the formula
       await Promise.all(
