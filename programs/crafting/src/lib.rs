@@ -17,7 +17,7 @@ pub mod crafting {
         output_items: Vec<Item>,
         bump: u8, // Run `find_program_address` offchain for canonical bump
     ) -> ProgramResult {
-        let mut new_output_items = output_items.clone();
+        let new_output_items = output_items.clone();
 
         let output_authority_seeds = &[
             &"crafting".as_bytes(),
@@ -33,7 +33,7 @@ pub mod crafting {
 
         let account_iter = &mut ctx.remaining_accounts.iter();
 
-        for (index, item) in output_items.iter().enumerate() {
+        for (_index, item) in output_items.iter().enumerate() {
             let output_mint = next_account_info(account_iter)?;
 
             if item.is_master_edition {
@@ -92,7 +92,7 @@ pub mod crafting {
         bump: u8,
     ) -> ProgramResult {
         let formula = &ctx.accounts.formula;
-        let expected_remaining = formula.ingredients.len() * 2 + formula.output_items.len() * 2;
+        let _expected_remaining = formula.ingredients.len() * 2 + formula.output_items.len() * 2;
         let accounts_info_iter = &mut ctx.remaining_accounts.iter();
 
         msg!("remaining accounts length {:?}", ctx.remaining_accounts.len());
