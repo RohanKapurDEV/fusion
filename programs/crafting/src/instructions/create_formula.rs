@@ -52,7 +52,6 @@ pub fn handler<'a, 'b, 'c, 'info>(
         let output_mint = next_account_info(account_iter)?;
 
         if item.is_master_edition {
-            msg!("item.is_master_edition");
             let cur_master_edition_holder = next_account_info(account_iter)?;
             let program_master_token_acct = next_account_info(account_iter)?;
 
@@ -71,7 +70,6 @@ pub fn handler<'a, 'b, 'c, 'info>(
                 ctx.accounts.token_program.to_account_info(),
                 ctx.accounts.rent.to_account_info(),
                 ctx.accounts.system_program.to_account_info(),
-                output_authority_seeds,
             )?;
 
             // Transfer the MasterEdition token

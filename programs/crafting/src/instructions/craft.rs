@@ -27,16 +27,8 @@ pub fn handler<'a, 'b, 'c, 'info>(
     bump: u8,
 ) -> ProgramResult {
     let formula = &ctx.accounts.formula;
-    let _expected_remaining = formula.ingredients.len() * 2 + formula.output_items.len() * 2;
-    let accounts_info_iter = &mut ctx.remaining_accounts.iter();
 
-    msg!(
-        "remaining accounts length {:?}",
-        ctx.remaining_accounts.len()
-    );
-    // if ctx.remaining_accounts.len() != expected_remaining {
-    //     return Err(ErrorCode::InvalidRemainingAccountsLength.into());
-    // }
+    let accounts_info_iter = &mut ctx.remaining_accounts.iter();
 
     for ingredient in formula.ingredients.iter() {
         let ingredient_token = next_account_info(accounts_info_iter)?;

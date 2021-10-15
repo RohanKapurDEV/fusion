@@ -13,6 +13,7 @@ import {
   Keypair,
   PublicKey,
   sendAndConfirmTransaction,
+  Signer,
   SystemProgram,
   Transaction,
   TransactionInstruction,
@@ -31,7 +32,7 @@ import { Ingredient, Item } from "./types";
 
 const textEncoder = new TextEncoder();
 export const TOKEN_METADATA = new PublicKey(
-  "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
+  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
 export const initNewTokenMintInstruction = async (
@@ -109,19 +110,36 @@ export const createIngredientMints = async (
   wallet: Keypair,
   amount: number = 2
 ) => {
-  const ingredientMints: PublicKey[] = [];
+  const ingredientMints: PublicKey[] = [],
+    transaction: Transaction = new Transaction();
+  let signers: Signer[] = [];
   await Promise.all(
     Array(amount)
       .fill(0)
       .map(async (x) => {
-        const { mintAccount } = await initNewTokenMint(
+        const {
+          transaction: tx,
+          signers: newSigners,
+          mintAccount,
+        } = await initNewTokenMintInstruction(
           connection,
           owner,
-          wallet,
+          wallet.publicKey,
           0
         );
+        signers = [...signers, ...newSigners];
         ingredientMints.push(mintAccount.publicKey);
+        tx.instructions.forEach((ix) => transaction.add(ix));
       })
+  );
+
+  await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [wallet, ...signers],
+    {
+      commitment: "confirmed",
+    }
   );
   return ingredientMints;
 };
@@ -531,7 +549,7 @@ export const deriveMasterTokenAccount = (
     programId
   );
 
-export const processOutputItems = async (
+export const processOutputItemsForCreateFormula = async (
   program: Program,
   formulaKey: PublicKey,
   outputItems: Item[],
