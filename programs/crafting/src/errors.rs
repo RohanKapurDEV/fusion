@@ -14,4 +14,6 @@ pub enum ErrorCode {
     TokenAccountOwnerMustBeOutputMintAuthority,
     #[msg("Master Token account does not matched derived address")]
     MasterTokenAccountMismatch,
+    #[msg("Invalid token metadata program")]
+    InvalidTokenMetadataProgram
 }

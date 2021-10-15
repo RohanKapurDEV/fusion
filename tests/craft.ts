@@ -20,7 +20,7 @@ import {
   mintTokensToAccount,
   setupMetaplexMasterEdition,
   createAccountsForOutputPrint,
-  processOutputItems,
+  processOutputItemsForCreateFormula,
   deriveMasterTokenAccount,
 } from "./utils";
 
@@ -267,7 +267,9 @@ describe("craft", async () => {
   });
 
   describe("2-to-1 Metaplex print output formula", () => {
-    let masterEditionKey: PublicKey, masterTokenMintKey: PublicKey;
+    let masterEditionKey: PublicKey,
+      masterTokenMintKey: PublicKey,
+      formula: Formula;
     beforeEach(async () => {
       // create the metaplex output info
       const { masterEditionHolder, masterTokenKey, editionAccount } =
@@ -294,7 +296,7 @@ describe("craft", async () => {
           isMasterEdition: true,
         },
       ];
-      const formula: Formula = {
+      formula = {
         ingredients,
         outputItems,
       };
@@ -310,7 +312,7 @@ describe("craft", async () => {
 
       const remainingAccounts: AccountMeta[] = [],
         masterTokenAccounts: PublicKey[] = [];
-      await processOutputItems(
+      await processOutputItemsForCreateFormula(
         program,
         formulaKp.publicKey,
         formula.outputItems,
@@ -350,11 +352,6 @@ describe("craft", async () => {
         masterEditionInfoBefore.data
       );
       assert.ok(masterEditionBefore.supply.eqn(0));
-
-      // grab the formula from the chain
-      const formula = (await program.account.formula.fetch(
-        formulaKp.publicKey
-      )) as Formula;
 
       let remainingAccounts: AccountMeta[] = [];
       let ingredientTokenPubkeys: PublicKey[] = [];
@@ -477,6 +474,126 @@ describe("craft", async () => {
         masterEditionInfoAfter.data
       );
       assert.ok(masterEditionAfter.supply.eqn(1));
+    });
+
+    describe("bad metaplex metadata program", () => {
+      it("should error", async () => {
+        let remainingAccounts: AccountMeta[] = [];
+        let ingredientTokenPubkeys: PublicKey[] = [];
+        let outputTokenPubkeys: PublicKey[] = [];
+
+        // Create ingredient ATAs for crafter
+        const starterPromise = Promise.resolve(null);
+        await formula.ingredients.reduce(async (accumulator, ingredient) => {
+          await accumulator;
+          let craftersTokenAccount = await createAssociatedTokenAccount(
+            provider.connection,
+            crafter,
+            ingredient.mint
+          );
+
+          // Mint the right amount of ingredient tokens to the crafter's ATAs
+          await mintTokensToAccount(
+            provider.connection,
+            ingredient.amount,
+            ingredient.mint,
+            craftersTokenAccount,
+            mintAuthority
+          );
+
+          remainingAccounts.push({
+            pubkey: craftersTokenAccount,
+            isWritable: ingredient.burnOnCraft,
+            isSigner: false,
+          });
+          ingredientTokenPubkeys.push(craftersTokenAccount);
+
+          // Push ingredient mints
+          remainingAccounts.push({
+            pubkey: ingredient.mint,
+            isWritable: ingredient.burnOnCraft,
+            isSigner: false,
+          });
+          return null;
+        }, starterPromise);
+
+        const [craftingMintAuthority, craftingMintAuthorityBump] =
+          await PublicKey.findProgramAddress(
+            [textEncoder.encode("crafting"), formulaKp.publicKey.toBuffer()],
+            program.programId
+          );
+
+        await formula.outputItems.reduce(async (accumulator, item) => {
+          await accumulator;
+          if (item.isMasterEdition) {
+            // Derive the masterTokenKey
+            const [masterTokenAccount] = await deriveMasterTokenAccount(
+              formulaKp.publicKey,
+              item.mint,
+              program.programId
+            );
+            // add the remaining accounts for the master edition print
+            const outputPrintAccounts = await createAccountsForOutputPrint(
+              provider,
+              masterTokenMintKey,
+              craftingMintAuthority,
+              masterTokenAccount,
+              craftingMintAuthority,
+              item,
+              new BN(1)
+            );
+            outputPrintAccounts[0] = {
+              pubkey: SystemProgram.programId,
+              isSigner: false,
+              isWritable: false,
+            };
+            remainingAccounts = [...remainingAccounts, ...outputPrintAccounts];
+          } else {
+            // Create output item ATAs for crafter
+            const outputItemTokenAccount = await createAssociatedTokenAccount(
+              provider.connection,
+              crafter,
+              item.mint
+            );
+
+            // Push output item token account
+            remainingAccounts.push({
+              pubkey: outputItemTokenAccount,
+              isWritable: true,
+              isSigner: false,
+            });
+            outputTokenPubkeys.push(outputItemTokenAccount);
+
+            // Push output Item mints
+            remainingAccounts.push({
+              pubkey: item.mint,
+              isWritable: true,
+              isSigner: false,
+            });
+          }
+
+          return null;
+        }, starterPromise);
+
+        try {
+          await program.rpc.craft(craftingMintAuthorityBump, {
+            accounts: {
+              authority: crafter.publicKey,
+              formula: formulaKp.publicKey,
+              pdaAuth: craftingMintAuthority,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: SystemProgram.programId,
+              rent: SYSVAR_RENT_PUBKEY,
+            },
+            remainingAccounts,
+            signers: [crafter],
+          });
+          assert.ok(false);
+        } catch (err) {
+          const errMsg = "Invalid token metadata program";
+          assert.equal((err as Error).toString(), errMsg);
+        }
+      });
     });
   });
 });

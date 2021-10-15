@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 use spl_token_metadata::instruction::mint_new_edition_from_master_edition_via_token;
 use std::slice::Iter;
 
+use crate::errors;
+
 pub fn mint_new_edition_cpi<'info>(
   account_iter: &mut Iter<AccountInfo<'info>>,
   payer: &AccountInfo<'info>,
@@ -22,7 +24,10 @@ pub fn mint_new_edition_cpi<'info>(
   let metadata_acct = next_account_info(account_iter)?;
   let metadata_mint_acct = next_account_info(account_iter)?;
 
-  // TODO: check that the metadata program is expected
+  // check that the metadata program is expected
+  if !spl_token_metadata::check_id(metadata_program_acct.key) {
+    return Err(errors::ErrorCode::InvalidTokenMetadataProgram.into())
+  }
 
   let ix = mint_new_edition_from_master_edition_via_token(
     *metadata_program_acct.key,

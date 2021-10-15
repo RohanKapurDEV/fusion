@@ -17,7 +17,7 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 const base58 = require("bs58");
 
 export const metadataProgramId = new PublicKey(
-  "5tjtB3wTFL3eozHAFo2Qywg8ZtzJFH4qBYhyvAE49TYC"
+  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
 export type StringPublicKey = string;

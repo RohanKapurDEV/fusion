@@ -1,30 +1,17 @@
 import * as anchor from "@project-serum/anchor";
-import {
-  createMasterEdition,
-  createMetadata,
-  Creator,
-  Data,
-} from "./metadata_utils";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   AccountMeta,
-  Keypair,
   PublicKey,
-  sendAndConfirmTransaction,
-  Signer,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
-  Transaction,
-  TransactionInstruction,
 } from "@solana/web3.js";
 import { assert, expect } from "chai";
 import {
   createIngredientMints,
   createIngredients,
-  deriveMasterTokenAccount,
-  initNewTokenAccountInstructions,
   initNewTokenMint,
-  processOutputItems,
+  processOutputItemsForCreateFormula,
   setupMetaplexMasterEdition,
 } from "./utils";
 import { BN } from "@project-serum/anchor";
@@ -404,7 +391,7 @@ describe("create_formula", () => {
 
       const remainingAccounts: AccountMeta[] = [],
         masterTokenAccounts: PublicKey[] = [];
-      await processOutputItems(
+      await processOutputItemsForCreateFormula(
         program,
         formulaKeypair.publicKey,
         formula.outputItems,
