@@ -10,7 +10,6 @@ pub fn create_master_token_account<'info>(
   token_program: AccountInfo<'info>,
   rent: AccountInfo<'info>,
   system_program: AccountInfo<'info>,
-  output_authority_seeds: &[&[u8]],
 ) -> ProgramResult {
   msg!("In token_utils");
   // derive account address from seeds

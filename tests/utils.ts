@@ -13,6 +13,7 @@ import {
   Keypair,
   PublicKey,
   sendAndConfirmTransaction,
+  Signer,
   SystemProgram,
   Transaction,
   TransactionInstruction,
@@ -109,19 +110,36 @@ export const createIngredientMints = async (
   wallet: Keypair,
   amount: number = 2
 ) => {
-  const ingredientMints: PublicKey[] = [];
+  const ingredientMints: PublicKey[] = [],
+    transaction: Transaction = new Transaction();
+  let signers: Signer[] = [];
   await Promise.all(
     Array(amount)
       .fill(0)
       .map(async (x) => {
-        const { mintAccount } = await initNewTokenMint(
+        const {
+          transaction: tx,
+          signers: newSigners,
+          mintAccount,
+        } = await initNewTokenMintInstruction(
           connection,
           owner,
-          wallet,
+          wallet.publicKey,
           0
         );
+        signers = [...signers, ...newSigners];
         ingredientMints.push(mintAccount.publicKey);
+        tx.instructions.forEach((ix) => transaction.add(ix));
       })
+  );
+
+  await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [wallet, ...signers],
+    {
+      commitment: "confirmed",
+    }
   );
   return ingredientMints;
 };

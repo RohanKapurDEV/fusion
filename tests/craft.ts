@@ -5,12 +5,10 @@ import {
   AccountMeta,
   Keypair,
   PublicKey,
-  Signer,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
-  TransactionInstruction,
 } from "@solana/web3.js";
-import { assert, expect } from "chai";
+import { assert } from "chai";
 import { decodeMasterEdition } from "./metadata_utils";
 import { Formula, Ingredient, Item } from "./types";
 import {
@@ -21,7 +19,6 @@ import {
   createAssociatedTokenAccount,
   mintTokensToAccount,
   setupMetaplexMasterEdition,
-  initNewTokenAccountInstructions,
   createAccountsForOutputPrint,
   processOutputItems,
   deriveMasterTokenAccount,

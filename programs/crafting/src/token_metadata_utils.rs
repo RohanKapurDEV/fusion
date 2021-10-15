@@ -21,6 +21,9 @@ pub fn mint_new_edition_cpi<'info>(
   let new_metadata_update_authority_acct = next_account_info(account_iter)?;
   let metadata_acct = next_account_info(account_iter)?;
   let metadata_mint_acct = next_account_info(account_iter)?;
+
+  // TODO: check that the metadata program is expected
+
   let ix = mint_new_edition_from_master_edition_via_token(
     *metadata_program_acct.key,
     *new_metadata_acct.key,

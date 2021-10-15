@@ -16,6 +16,9 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod crafting {
     use super::*;
 
+    ///
+    /// Create a new fusion formula with variable _ingredients_ and _output_items_
+    /// 
     pub fn create_formula<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, CreateFormula<'info>>,
         ingredients: Vec<Ingredient>,
@@ -25,6 +28,9 @@ pub mod crafting {
         instructions::create_formula::handler(ctx, ingredients, output_items, bump)
     }
 
+    ///
+    /// Take ingredients for a formula and output the new tokens/NFTs
+    /// 
     pub fn craft<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, Craft<'info>>,
         bump: u8,
